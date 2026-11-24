@@ -19,11 +19,14 @@ npx serve .
 
 then open `http://localhost:3000/Fourball.dc.html`.
 
-## Deploy (Cloudflare Pages)
+## Deploy (Cloudflare)
 
-1. Cloudflare dashboard → Workers & Pages → Create → Pages → Connect to Git, pick this repo.
-2. Framework preset: **None**. Build command: *(leave empty)*. Build output directory: `/`.
-3. Deploy. The site root serves the app (see `_redirects`).
+`wrangler.jsonc` tells Cloudflare to serve this folder as static files. `.assetsignore` keeps the config and README out of the upload.
+
+- **Workers (Connect to Git):** build command empty, deploy command `npx wrangler deploy`.
+- **Pages:** framework preset **None**, build command empty, build output directory `/`.
+
+The site root serves the app (see `_redirects`).
 
 `_redirects` maps `/` to the app. `_headers` turns off caching for the app files so phones pick up new versions straight away.
 
