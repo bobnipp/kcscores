@@ -1,0 +1,15 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/*.html
+  Cache-Control: no-cache
+
+/support.js
+  Cache-Control: no-cache
+
+/_ds/*
+  Cache-Control: public, max-age=86400
+
+/supabase/*
+  X-Robots-Tag: noindex

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-cf8d7cfc-b9c0-4def-9741-cbdd89be2e6e/styles.css">
+<script src="_ds/modernist-cf8d7cfc-b9c0-4def-9741-cbdd89be2e6e/_ds_bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0;background:var(--color-surface);font-family:var(--font-body);color:var(--color-text)}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}*{box-sizing:border-box}button{font-family:inherit}</style>
+</helmet>
+<div style="max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);font-variant-numeric:tabular-nums;border-left:2px solid var(--color-text);border-right:2px solid var(--color-text)">
+
+  <header style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:var(--space-3);padding:var(--space-6) var(--space-4) var(--space-4);border-bottom:2px solid var(--color-text)">
+    <div style="display:flex;flex-direction:column;gap:var(--space-1);min-width:0">
+      <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ course }} · {{ formatLabel }}</div>
+      <div style="font-family:var(--font-heading);font-weight:800;font-size:32px;line-height:1;letter-spacing:-.02em">{{ title }}</div>
+    </div>
+    <div style="font-size:12px;font-weight:600;text-align:right;line-height:1.3;white-space:nowrap">{{ statusLine }}</div>
+    <button onClick="{{ toggleMenu }}" aria-label="Settings" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid var(--color-text);background:{{ menuBtnBg }};color:{{ menuBtnFg }};cursor:pointer;padding:0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ menuIconPath }}"></path></svg>
+    </button>
+  </header>
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;border-bottom:2px solid var(--color-text);background:var(--color-bg)">
+      <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="2">
+        <button onClick="{{ m.go }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:64px;border:0;border-bottom:1px solid var(--color-divider);background:transparent;color:var(--color-text);text-align:left;padding:0 var(--space-4) 0 0;cursor:pointer" style-hover="background:var(--color-accent-100)">
+          <span style="align-self:stretch;background:{{ m.bar }}"></span>
+          <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:18px;font-weight:800">{{ m.label }}</span><span style="font-size:13px">{{ m.meta }}</span></span>
+          <span style="font-size:20px;font-weight:700">→</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <main style="flex:1;display:flex;flex-direction:column">
+    <sc-if value="{{ hasSyncError }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-3);align-items:center;padding:var(--space-3) var(--space-4);background:var(--color-accent-100);color:var(--color-accent-900);border-bottom:2px solid var(--color-text);font-size:14px;font-weight:600;line-height:1.35">
+        <span>{{ syncError }}</span>
+        <button class="btn btn-secondary" onClick="{{ retrySync }}">OK</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:var(--space-8) var(--space-4);font-family:var(--font-heading);font-size:22px;font-weight:800">Loading event…</div>
+    </sc-if>
+
+    <sc-if value="{{ noEvent }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-8) var(--space-4);border-bottom:2px solid var(--color-text)">
+        <div style="font-family:var(--font-heading);font-weight:800;font-size:28px;line-height:1.1">No event is in progress.</div>
+        <div style="font-size:15px;line-height:1.4">Start a new event from Setup to begin scoring.</div>
+        <div style="display:flex"><button class="btn btn-primary" onClick="{{ goSetup }}" style="white-space:nowrap">Go to Setup</button></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPick }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-6) var(--space-4) var(--space-4);border-bottom:2px solid var(--color-text)">
+        <div style="font-family:var(--font-heading);font-weight:800;font-size:26px;line-height:1.1">Which team are you scoring for?</div>
+        <div style="font-size:14px;line-height:1.4">Only one scorer per team. You can switch later from the scorecard.</div>
+      </div>
+      <sc-for list="{{ pickTeams }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.pick }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-3);width:100%;min-height:72px;border:0;border-bottom:1px solid var(--color-divider);background:{{ t.bg }};color:var(--color-text);text-align:left;padding:var(--space-3) var(--space-4);cursor:pointer" style-hover="background:var(--color-accent-100)">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:18px;font-weight:800">{{ t.name }}</span><span style="font-size:13px;line-height:1.35">{{ t.players }}</span></span>
+          <span style="font-size:13px;font-weight:700;white-space:nowrap">{{ t.meta }}</span>
+        </button>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ isScore }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--color-divider)">
+        <span style="font-size:13px;min-width:0">Scoring for <strong style="white-space:nowrap">{{ myTeamName }}</strong></span>
+        <button class="btn btn-ghost" onClick="{{ changeTeam }}" style="white-space:nowrap;flex-shrink:0">Switch team</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(9,1fr);border-bottom:2px solid var(--color-text)">
+        <sc-for list="{{ holeStrip }}" as="h" hint-placeholder-count="18">
+          <button onClick="{{ h.go }}" style="height:44px;border:0;border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);background:{{ h.bg }};color:{{ h.fg }};font-weight:700;font-size:14px;cursor:pointer;text-align:left;padding:0 8px">{{ h.n }}</button>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--space-4);align-items:end;padding:var(--space-4);border-bottom:2px solid var(--color-text)">
+        <div style="font-family:var(--font-heading);font-weight:800;font-size:88px;line-height:.8;letter-spacing:-.04em">{{ holeNo }}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+          <div><div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em">Par</div><div style="font-size:24px;font-weight:800">{{ holePar }}</div></div>
+          <div><div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em">Stroke index</div><div style="font-size:24px;font-weight:800">{{ holeSi }}</div></div>
+        </div>
+      </div>
+
+      <sc-for list="{{ entryRows }}" as="r" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-divider)">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)"><span style="font-weight:700;font-size:17px">{{ r.name }}</span><sc-for list="{{ r.tags }}" as="tg" hint-placeholder-count="0"><span class="tag tag-accent" style="white-space:nowrap">{{ tg.t }}</span></sc-for></div>
+            <div style="font-size:13px;display:flex;flex-wrap:wrap;column-gap:var(--space-2);row-gap:2px"><span style="white-space:nowrap">{{ r.hcp }}</span><span style="color:var(--color-accent-700);font-weight:700;white-space:nowrap">{{ r.strokes }}</span><span style="white-space:nowrap">{{ r.net }}</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:48px 56px 48px;border:2px solid var(--color-text);margin-top:var(--space-1)">
+            <button onClick="{{ r.dec }}" style="height:48px;border:0;border-right:2px solid var(--color-text);background:transparent;font-size:24px;font-weight:600;cursor:pointer;color:var(--color-text)">−</button>
+            <button onClick="{{ r.fill }}" style="height:48px;border:0;background:{{ r.cellBg }};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:{{ r.color }};cursor:pointer;font-variant-numeric:tabular-nums;padding:0"><span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:{{ r.ring }};outline:{{ r.ring2 }};outline-offset:2px">{{ r.score }}</span></button>
+            <button onClick="{{ r.inc }}" style="height:48px;border:0;border-left:2px solid var(--color-text);background:transparent;font-size:24px;font-weight:600;cursor:pointer;color:var(--color-text)">+</button>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:2px solid var(--color-text)">
+        <span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Hole total</span>
+        <span style="font-size:28px;font-weight:800;color:{{ holeTotalFg }}">{{ holeTotal }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:var(--space-2);padding:var(--space-4)">
+        <button class="btn btn-secondary" onClick="{{ prevHole }}" style="height:52px">← Prev</button>
+        <button class="btn btn-primary" onClick="{{ nextHole }}" style="height:52px">{{ nextLabel }}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
+        <sc-for list="{{ prizeLeaders }}" as="p" hint-placeholder-count="5">
+          <div style="padding:var(--space-3) var(--space-4);border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);display:flex;flex-direction:column;gap:var(--space-1)">
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent-700);font-weight:600">{{ p.label }}</div>
+            <div style="font-size:18px;font-weight:800;line-height:1.15">{{ p.winners }}</div>
+            <div style="font-size:14px">{{ p.value }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="padding:var(--space-4) var(--space-4) var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Standings · to par · tap a team for its card</div>
+      <div style="display:grid;grid-template-columns:{{ boardCols }};border-top:2px solid var(--color-text);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">
+        <sc-for list="{{ boardHead }}" as="hd" hint-placeholder-count="7">
+          <div style="padding:var(--space-2);border-bottom:2px solid var(--color-text);line-height:1.2">{{ hd.a }}<br>{{ hd.b }}</div>
+        </sc-for>
+      </div>
+      <sc-for list="{{ boardRows }}" as="row" hint-placeholder-count="4">
+        <button onClick="{{ row.open }}" style="display:grid;grid-template-columns:{{ boardCols }};width:100%;border:0;border-bottom:1px solid var(--color-divider);background:{{ row.bg }};padding:0;text-align:left;cursor:pointer;color:var(--color-text);font-size:15px">
+          <div style="padding:var(--space-3) var(--space-2);font-weight:800;display:flex;flex-direction:column;gap:2px;min-width:0"><span>{{ row.name }}</span></div>
+          <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="6">
+            <div style="padding:var(--space-3) var(--space-2);background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.w }}">{{ c.t }}</div>
+          </sc-for>
+        </button>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-bottom:2px solid var(--color-text)">
+        <button class="btn btn-ghost" onClick="{{ backToBoard }}">← Leaderboard</button>
+        <div style="font-size:13px;font-weight:600">{{ detailThru }}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:2px solid var(--color-text)">
+        <sc-for list="{{ detailPlayers }}" as="p" hint-placeholder-count="4">
+          <div style="padding:var(--space-3);border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:20px;font-weight:800">{{ p.ini }}</div>
+            <div style="font-size:12px;line-height:1.2">{{ p.name }}</div>
+            <div style="font-size:12px;font-weight:600">HCP {{ p.hcp }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-for list="{{ cardRows }}" as="row" hint-placeholder-count="21">
+        <div style="display:grid;grid-template-columns:{{ cardCols }};background:{{ row.bg }};border-bottom:{{ row.rule }};font-size:14px">
+          <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="8">
+            <div style="padding:7px 6px;color:{{ c.fg }};font-weight:{{ c.w }};display:flex;align-items:baseline;gap:1px"><span>{{ c.t }}</span><span style="font-size:9px;color:var(--color-accent-700)">{{ c.sub }}</span></div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="padding:var(--space-3) var(--space-4);font-size:12px;line-height:1.5">Dots mark handicap strokes. Bold balls counted for the team. Red = birdie or better.</div>
+    </sc-if>
+
+    <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--color-text)">
+        <sc-for list="{{ potCells }}" as="c" hint-placeholder-count="3">
+          <div style="padding:var(--space-3) var(--space-4);border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:var(--space-1)">
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em">{{ c.label }}</div>
+            <div style="font-size:26px;font-weight:800;line-height:1">{{ c.val }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ notFinal }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-6) var(--space-4);border-bottom:2px solid var(--color-text)">
+          <div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1.1">Payouts appear when every team has finished.</div>
+          <div style="font-size:15px">{{ finishedLine }}</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isFinal }}" hint-placeholder-val="{{ false }}">
+      <sc-for list="{{ prizeRows }}" as="p" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-divider)">
+          <div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">{{ p.label }}</div><div style="font-size:17px;font-weight:800">{{ p.winners }}</div></div>
+          <div style="text-align:right;white-space:nowrap"><div style="font-size:17px;font-weight:800">{{ p.amount }}</div><div style="font-size:12px">{{ p.value }}</div></div>
+        </div>
+      </sc-for>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 88px;padding:var(--space-6) var(--space-4) var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;border-bottom:2px solid var(--color-text)"><span>Per player</span><span style="text-align:right">Won</span></div>
+      <sc-for list="{{ payGroups }}" as="g" hint-placeholder-count="4">
+        <div style="border-bottom:2px solid var(--color-text)">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 88px;padding:var(--space-3) var(--space-4) var(--space-2);font-weight:800;font-size:16px"><span>{{ g.team }}</span><span style="text-align:right">{{ g.won }}</span></div>
+          <sc-for list="{{ g.players }}" as="pl" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 88px;padding:6px var(--space-4);font-size:14px;border-top:1px solid var(--color-divider)"><span>{{ pl.name }}</span><span style="text-align:right;font-weight:700">{{ pl.won }}</span></div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="height:var(--space-6)"></div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);padding:var(--space-4);border-bottom:2px solid var(--color-text)">
+        <input class="input" type="search" value="{{ search }}" onChange="{{ setSearch }}" placeholder="Search players" style="min-width:0">
+        <button class="btn btn-primary" onClick="{{ openAdd }}" style="white-space:nowrap">+ Add player</button>
+      </div>
+      <sc-if value="{{ adding }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-accent-100);border-bottom:2px solid var(--color-text)">
+          <div style="font-family:var(--font-heading);font-weight:800;font-size:20px;line-height:1.1">New player</div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:var(--space-2)">
+            <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Name<input class="input" value="{{ draftName }}" onChange="{{ setDraftName }}" placeholder="First Last" style="min-width:0"></label>
+            <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Index<input class="input" type="number" step="0.1" inputmode="decimal" value="{{ draftIndex }}" onChange="{{ setDraftIndex }}" placeholder="0.0" style="min-width:0"></label>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-2)">
+            <button class="btn btn-primary" onClick="{{ saveDraft }}" disabled="{{ draftInvalid }}" style="height:48px">Save player</button>
+            <button class="btn btn-ghost" onClick="{{ closeAdd }}" style="height:48px">Cancel</button>
+          </div>
+        </div>
+      </sc-if>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px;padding:var(--space-3) var(--space-4) var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;border-bottom:2px solid var(--color-text)"><span>{{ rosterCount }}</span><span style="text-align:right">Index</span></div>
+      <sc-for list="{{ playerRows }}" as="p" hint-placeholder-count="8">
+        <div style="border-bottom:1px solid var(--color-divider)">
+          <sc-if value="{{ p.viewing }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ p.edit }}" style="display:grid;grid-template-columns:minmax(0,1fr) 72px;align-items:center;gap:var(--space-3);width:100%;min-height:60px;border:0;background:transparent;color:var(--color-text);text-align:left;padding:var(--space-2) var(--space-4);cursor:pointer" style-hover="background:var(--color-accent-100)">
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:17px;font-weight:700">{{ p.name }}</span><span style="font-size:13px;color:{{ p.teamFg }};font-weight:{{ p.teamW }}">{{ p.team }}</span></span>
+              <span style="font-size:24px;font-weight:800;text-align:right">{{ p.index }}</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);background:var(--color-surface);border-top:2px solid var(--color-text);border-bottom:2px solid var(--color-text)">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:var(--space-2)">
+                <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Name<input class="input" value="{{ p.name }}" onChange="{{ p.setName }}" style="min-width:0"></label>
+                <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Index<input class="input" type="number" step="0.1" inputmode="decimal" value="{{ p.indexRaw }}" onChange="{{ p.setIndex }}" style="min-width:0"></label>
+              </div>
+              <div style="font-size:13px">{{ p.team }}</div>
+              <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-2)">
+                <button class="btn btn-primary" onClick="{{ p.done }}" style="height:48px">Done</button>
+                <button class="btn btn-ghost" onClick="{{ p.remove }}" style="height:48px">Remove</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noMatches }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:var(--space-6) var(--space-4);font-size:15px">{{ noMatchText }}</div>
+      </sc-if>
+      <div style="height:var(--space-8)"></div>
+    </sc-if>
+
+    <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);border-bottom:2px solid var(--color-text);background:{{ newBg }}">
+        <sc-if value="{{ idle }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:var(--space-2);font-size:13px;font-weight:600"><span class="tag {{ eventTagClass }}" style="white-space:nowrap">{{ eventTag }}</span></div>
+          <sc-if value="{{ notInProgress }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-primary btn-block" onClick="{{ askNew }}" style="height:52px">Start new event</button>
+          </sc-if>
+          <sc-if value="{{ inProgress }}" hint-placeholder-val="{{ true }}">
+            <button class="btn btn-secondary btn-block" onClick="{{ askEnd }}" style="height:52px">End event</button>
+          </sc-if>
+        </sc-if>
+        <sc-if value="{{ confirmingEnd }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">End this event?</div>
+          <div style="font-size:14px;line-height:1.4">Score, Board and Payouts will show that no event is in progress.</div>
+          <button class="btn btn-primary btn-block" onClick="{{ endEvent }}" style="height:52px">End event</button>
+          <button class="btn btn-ghost" onClick="{{ cancelNew }}">Cancel</button>
+        </sc-if>
+        <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">Start a new event?</div>
+          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with the current teams and players. Past events stay saved.</div>
+          <button class="btn btn-primary btn-block" onClick="{{ newKeep }}" style="height:52px">Start new event</button>
+          <button class="btn btn-ghost" onClick="{{ cancelNew }}">Cancel</button>
+        </sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4);border-bottom:2px solid var(--color-text)">
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600">Course
+          <div style="display:flex;flex-direction:column;border:2px solid var(--color-text)">
+            <sc-for list="{{ courseList }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ c.pick }}" style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:48px;border:0;border-bottom:1px solid var(--color-divider);background:{{ c.bg }};color:var(--color-text);text-align:left;padding:0 var(--space-3);cursor:pointer;font-size:15px;font-weight:{{ c.w }}">
+                <span style="width:16px;height:16px;border:2px solid var(--color-text);border-radius:50%;background:{{ c.dot }};box-shadow:inset 0 0 0 2px var(--color-bg)"></span>
+                <span>{{ c.name }}<span style="display:block;font-size:12px;font-weight:400">{{ c.meta }}</span></span>
+                <sc-if value="{{ c.home }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">Home</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:var(--space-2)"><button class="btn btn-ghost" onClick="{{ addCourse }}" style="white-space:nowrap">+ Add course</button></div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;max-width:50%">Buy-in per player ($)<input class="input" type="number" value="{{ buyIn }}" onChange="{{ setBuyIn }}"></label>
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600">Team format
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--color-text)">
+            <sc-for list="{{ formatOpts }}" as="o" hint-placeholder-count="3">
+              <button onClick="{{ o.pick }}" style="height:44px;border:0;border-right:1px solid var(--color-divider);background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-size:14px;text-align:left;padding:0 var(--space-3);cursor:pointer">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-weight:400;font-size:13px;line-height:1.4">{{ formatHelp }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-2)">
+        <span style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Teams</span>
+        <button class="btn btn-ghost" onClick="{{ goPlayers }}" style="white-space:nowrap">Manage players →</button>
+      </div>
+      <sc-for list="{{ setupTeams }}" as="t" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4);border-top:2px solid var(--color-text)">
+          <input class="input" value="{{ t.name }}" onChange="{{ t.setName }}" placeholder="Team name" style="font-weight:800;font-size:17px">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 92px 36px;gap:var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em"><span>Player</span><span>Idx</span><span>Tees</span><span>HCP</span></div>
+          <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 92px 36px;gap:var(--space-2);align-items:center">
+              <select class="input" value="{{ p.pid }}" onChange="{{ p.setPid }}" style="min-width:0">
+                <sc-for list="{{ p.opts }}" as="o" hint-placeholder-count="8"><option value="{{ o.v }}" disabled="{{ o.dis }}">{{ o.label }}</option></sc-for>
+              </select>
+              <div style="font-size:14px;font-weight:600">{{ p.index }}</div>
+              <select class="input" value="{{ p.tee }}" onChange="{{ p.setTee }}" style="min-width:0">
+                <sc-for list="{{ teeOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+              </select>
+              <div style="font-size:17px;font-weight:800">{{ p.hcp }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-3);border-top:2px solid var(--color-text)">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Edit course · par and hole handicap (stroke index)</div>
+        <input class="input" value="{{ course }}" onChange="{{ setCourse }}" style="font-weight:800;font-size:17px">
+        <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap">
+          <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}"><span class="tag tag-accent">Home course</span></sc-if>
+          <sc-if value="{{ notHome }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ setHome }}">Set as home course</button></sc-if>
+          <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ deleteCourse }}">Delete course</button></sc-if>
+        </div>
+        <div style="font-size:13px">{{ siWarning }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:0 var(--space-4) var(--space-4)">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 64px 44px;gap:var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600"><span>Tees</span><span>Rating</span><span>Slope</span><span></span></div>
+        <sc-for list="{{ teeRows }}" as="t" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 64px 44px;gap:var(--space-2);align-items:center">
+            <input class="input" value="{{ t.name }}" onChange="{{ t.setName }}" style="min-width:0">
+            <input class="input" type="number" step="0.1" value="{{ t.rating }}" onChange="{{ t.setRating }}" style="min-width:0">
+            <input class="input" type="number" value="{{ t.slope }}" onChange="{{ t.setSlope }}" style="min-width:0">
+            <button class="btn btn-ghost" onClick="{{ t.remove }}" style="padding:0 var(--space-2)">×</button>
+          </div>
+        </sc-for>
+        <div style="display:flex"><button class="btn btn-ghost" onClick="{{ addTee }}" style="white-space:nowrap">+ Add tees</button></div>
+        <div style="font-size:13px;line-height:1.4">Player handicap = Index × Slope ÷ 113 + (Rating − Par), rounded. Strokes fall on the holes with the lowest stroke index.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:40px repeat(9,minmax(0,1fr));border-top:2px solid var(--color-text);font-size:13px">
+        <sc-for list="{{ courseCells }}" as="c" hint-placeholder-count="60">
+          <div style="border-bottom:1px solid var(--color-divider);border-right:1px solid var(--color-divider);height:36px;display:flex;align-items:center;padding:0 4px;font-weight:{{ c.w }}">
+            <sc-if value="{{ c.edit }}" hint-placeholder-val="{{ false }}">
+              <input type="number" value="{{ c.v }}" onChange="{{ c.set }}" style="width:100%;border:0;background:transparent;font:inherit;font-weight:600;padding:0;color:var(--color-text)">
+            </sc-if>
+            <sc-if value="{{ c.label }}" hint-placeholder-val="{{ true }}">{{ c.v }}</sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="height:var(--space-8)"></div>
+    </sc-if>
+  </main>
+
+  <nav style="position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--color-text);background:var(--color-bg)">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+      <button onClick="{{ n.go }}" style="height:60px;border:0;border-right:1px solid var(--color-divider);border-top:4px solid {{ n.bar }};background:transparent;text-align:left;padding:0 var(--space-4);font-size:15px;font-weight:{{ n.w }};color:var(--color-text);cursor:pointer">{{ n.label }}</button>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;simulateComplete&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
+const SB_URL = 'https://nnjsmukdjbglmqogdujs.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uanNtdWtkamJnbG1xb2dkdWpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0NzkzODEsImV4cCI6MjExMTA1NTM4MX0.Wv2uiNETkgtGnbDvbGI5TSrNlViVMFJh-mTp9Jrmzpw';
+const UIKEY = 'fourball-ui';
+const FORMATS = { gn: '1 Gross + 1 Net', gg: '2 Gross', nn: '2 Net' };
+const SI_DEFAULT = [1,3,5,7,9,11,13,15,17, 2,4,6,8,10,12,14,16,18];
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const DEFAULT_TEES = () => [{ id: uuid(), name: 'Blue', rating: 72.4, slope: 131 }, { id: uuid(), name: 'White', rating: 70.1, slope: 125 }, { id: uuid(), name: 'Gold', rating: 67.8, slope: 117 }];
+const PLACEHOLDER_COURSE = { id: null, name: 'No course yet', home: false, par: Array(18).fill(4), si: SI_DEFAULT, tees: [{ id: null, name: '—', rating: 72, slope: 113 }] };
+const byName = (a, b) => a.name.localeCompare(b.name);
+const defaultTeams = () => [0, 1, 2, 3].map(i => ({ id: null, name: String(i + 1), players: [0, 1, 2, 3].map(() => ({ epId: null, pid: null, tee: 1 })) }));
+const emptyScores = teams => teams.map(t => t.players.map(() => Array(18).fill(null)));
+const loadUI = () => { try { return JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch (e) { return {}; } };
+const saveUI = patch => { try { localStorage.setItem(UIKEY, JSON.stringify(Object.assign(loadUI(), patch))); } catch (e) {} };
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function fakeScore(r, par, hcp) {
+  const x = r(); const base = par + Math.round(hcp / 18 * 0.9);
+  let d = x < 0.08 ? -1 : x < 0.45 ? 0 : x < 0.8 ? 1 : x < 0.95 ? 2 : 3;
+  return Math.max(2, base + d - (hcp < 8 && x < 0.15 ? 1 : 0));
+}
+const strokesOn = (hcp, si) => hcp <= 0 ? 0 : Math.floor(hcp / 18) + (si <= hcp % 18 ? 1 : 0);
+const toPar = v => v === 0 ? 'E' : v > 0 ? '+' + v : '−' + Math.abs(v);
+const money = v => (v < 0 ? '−$' : '$') + (Math.round(Math.abs(v) * 100) / 100).toFixed(Math.abs(v) % 1 ? 2 : 0);
+
+class Component extends DCLogic {
+  state = (() => { const t = defaultTeams(); return { loading: true, syncError: '', screen: loadUI().screen || 'score', inProgress: false, eventId: null, myTeam: null, hole: 0, detail: 0, courses: [], courseId: null, buyIn: 20, format: 'gn', roster: [], teams: t, scores: emptyScores(t) }; })();
+
+  componentDidMount() {
+    this.pending = 0; this.timers = {};
+    const boot = () => {
+      if (!window.supabase) { this.bootT = setTimeout(boot, 100); return; }
+      this.sb = window.supabase.createClient(SB_URL, SB_KEY);
+      this.ch = this.sb.channel('fourball').on('postgres_changes', { event: '*', schema: 'public' }, () => this.scheduleRefetch()).subscribe();
+      this.onVis = () => { if (document.visibilityState === 'visible') this.scheduleRefetch(); };
+      document.addEventListener('visibilitychange', this.onVis);
+      this.refetch();
+    };
+    boot();
+  }
+  componentWillUnmount() { clearTimeout(this.bootT); if (this.ch) this.sb.removeChannel(this.ch); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); }
+  componentDidUpdate() { saveUI({ screen: this.state.screen }); }
+
+  fail(err) {
+    console.error(err);
+    const msg = err && err.code === '23503' ? 'That item is used by an event and can\u2019t be deleted.' : (err && err.message) || String(err);
+    this.setState({ syncError: msg });
+  }
+  scheduleRefetch() { clearTimeout(this.rt); this.rt = setTimeout(() => this.refetch(), 250); }
+  queue(key, fn, delay = 0) {
+    if (!this.sb) return;
+    if (this.timers[key]) clearTimeout(this.timers[key]); else this.pending++;
+    this.timers[key] = setTimeout(async () => {
+      delete this.timers[key];
+      try { const r = await fn(); if (r && r.error) this.fail(r.error); } catch (e) { this.fail(e); }
+      this.pending--;
+      if (!this.pending && this.needRefetch) { this.needRefetch = false; this.refetch(); }
+    }, delay);
+  }
+
+  async refetch() {
+    if (!this.sb) return;
+    if (this.pending) { this.needRefetch = true; return; }
+    const sb = this.sb;
+    try {
+      const [c, t, p, e] = await Promise.all([
+        sb.from('courses').select('*').order('created_at'),
+        sb.from('tees').select('*').order('sort'),
+        sb.from('players').select('*'),
+        sb.from('events').select('*').order('created_at', { ascending: false }).limit(1),
+      ]);
+      const err = [c, t, p, e].find(x => x.error); if (err) throw err.error;
+      const courses = c.data.map(x => ({ id: x.id, name: x.name, home: x.is_home, par: x.par, si: x.stroke_index,
+        tees: t.data.filter(y => y.course_id === x.id).map(y => ({ id: y.id, name: y.name, rating: +y.rating, slope: y.slope })) }));
+      const roster = p.data.map(x => ({ id: x.id, name: x.name, index: x.hcp_index == null ? '' : +x.hcp_index }));
+      const ev = e.data[0];
+      const home = courses.find(x => x.home) || courses[0];
+      let teams = null, scores = null;
+      if (ev) {
+        const [tm, ep, sc] = await Promise.all([
+          sb.from('event_teams').select('*').eq('event_id', ev.id).order('position'),
+          sb.from('event_players').select('*').eq('event_id', ev.id),
+          sb.from('scores').select('event_player_id,hole,strokes').eq('event_id', ev.id),
+        ]);
+        const err2 = [tm, ep, sc].find(x => x.error); if (err2) throw err2.error;
+        const crs = courses.find(x => x.id === ev.course_id) || home;
+        const nT = crs ? crs.tees.length : 1;
+        teams = tm.data.map(team => ({ id: team.id, name: team.name, players: [0, 1, 2, 3].map(slot => {
+          const r = ep.data.find(x => x.team_id === team.id && x.slot === slot);
+          const ti = crs && r ? crs.tees.findIndex(x => x.id === r.tee_id) : -1;
+          return { epId: r ? r.id : null, pid: r ? r.player_id : null, tee: ti >= 0 ? ti : Math.min(1, nT - 1) };
+        }) }));
+        const byEp = {}; sc.data.forEach(x => { (byEp[x.event_player_id] = byEp[x.event_player_id] || {})[x.hole] = x.strokes; });
+        scores = teams.map(team => team.players.map(pl => Array.from({ length: 18 }, (_, h) => (byEp[pl.epId] || {})[h + 1] ?? null)));
+      }
+      if (!teams || !teams.length) { teams = defaultTeams(); scores = emptyScores(teams); }
+      if (this.pending) { this.needRefetch = true; return; }
+      const ui = loadUI(), live = !!(ev && ev.in_progress);
+      const mt = live && ui.eventId === ev.id ? teams.findIndex(x => x.id === ui.teamId) : -1;
+      this.setState(st => {
+        let hole = st.hole;
+        if (st.loading && mt >= 0) { const fo = Array.from({ length: 18 }, (_, h) => h).find(h => scores[mt].some(row => row[h] == null)); hole = fo == null ? 17 : fo; }
+        return { loading: false, courses, roster, eventId: ev ? ev.id : null, inProgress: live,
+          courseId: live ? ev.course_id : (st.courseId && courses.some(x => x.id === st.courseId) ? st.courseId : home ? home.id : null),
+          buyIn: ev && (live || st.loading) ? +ev.buy_in : st.buyIn, format: ev && (live || st.loading) ? ev.format : st.format,
+          teams, scores, myTeam: mt >= 0 ? mt : null, hole };
+      });
+    } catch (err) { this.setState({ loading: false }); this.fail(err); }
+  }
+
+  view() {
+    const s = this.state, c = s.courses.find(x => x.id === s.courseId) || s.courses.find(x => x.home) || s.courses[0] || PLACEHOLDER_COURSE;
+    const tees = c.tees.length ? c.tees : PLACEHOLDER_COURSE.tees, coursePar = c.par.reduce((a, b) => a + b, 0);
+    const rb = {}; s.roster.forEach(r => rb[r.id] = r);
+    const teams = s.teams.map(t => Object.assign({}, t, { players: t.players.map(p => {
+      const r = rb[p.pid]; p = Object.assign({}, p, { name: r ? r.name : '', index: r ? r.index : '' });
+      const ti = Math.max(0, Math.min(tees.length - 1, +p.tee || 0)), tee = tees[ti];
+      const hcp = Math.round((+p.index || 0) * (+tee.slope || 113) / 113 + ((+tee.rating || coursePar) - coursePar));
+      return Object.assign({}, p, { tee: ti, teeName: tee.name, hcp });
+    }) }));
+    return Object.assign({}, s, { par: c.par, si: c.si, course: c.name, crs: Object.assign({}, c, { tees }), teams });
+  }
+
+  startNew() {
+    const s = this.state, home = s.courses.find(c => c.home) || s.courses[0];
+    if (!home) { this.fail('Add a course before starting an event.'); return; }
+    const evId = uuid(), tees = home.tees;
+    const teamRows = s.teams.map((t, i) => ({ id: uuid(), event_id: evId, position: i, name: t.name || String(i + 1) }));
+    const epRows = [];
+    s.teams.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: p.pid || null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
+    this.needRefetch = true;
+    this.queue('start', async () => {
+      let r = await this.sb.from('events').insert({ id: evId, course_id: home.id, buy_in: +s.buyIn || 0, format: s.format, in_progress: true }); if (r.error) return r;
+      r = await this.sb.from('event_teams').insert(teamRows); if (r.error) return r;
+      return this.sb.from('event_players').insert(epRows);
+    });
+    saveUI({ teamId: null, eventId: evId });
+    let k = 0;
+    const teams = s.teams.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: p.pid, tee: p.tee })) }));
+    this.setState({ eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'score' });
+  }
+
+  pickCourse(id) {
+    const s = this.state;
+    if (id === s.courseId) return;
+    if (s.inProgress && s.eventId) {
+      if (s.scores.some(t => t.some(row => row.some(v => v != null)))) { this.fail('The course can\u2019t be changed after scoring has started.'); return; }
+      const crs = s.courses.find(c => c.id === id); if (!crs) return;
+      const eps = []; s.teams.forEach(t => t.players.forEach(p => { if (p.epId) eps.push({ id: p.epId, tee: crs.tees.length ? crs.tees[Math.min(p.tee, crs.tees.length - 1)].id : null }); }));
+      this.queue('ec', async () => {
+        const r = await this.sb.from('events').update({ course_id: id }).eq('id', s.eventId); if (r.error) return r;
+        const rs = await Promise.all(eps.map(x => this.sb.from('event_players').update({ tee_id: x.tee }).eq('id', x.id)));
+        return rs.find(x => x.error);
+      });
+    }
+    this.setState({ courseId: id });
+  }
+  pushCourse() {
+    const id = this.state.courseId; if (!id) return;
+    this.queue('ca' + id, () => { const c = this.state.courses.find(x => x.id === id); return c && this.sb.from('courses').update({ par: c.par, stroke_index: c.si }).eq('id', id); }, 600);
+  }
+  mutRoster(id, fn) { this.mut(n => { const r = n.roster.find(x => x.id === id); if (r) fn(r, n); }); }
+  mutCourse(fn) { this.mut(n => { const c = n.courses.find(x => x.id === n.courseId) || n.courses[0]; if (c) fn(c, n); }); }
+  mut(fn) { this.setState(s => { const n = JSON.parse(JSON.stringify(s)); fn(n); return n; }); }
+
+  scoresFor(ti) {
+    const s = this.view();
+    if (!this.props.simulateComplete) return s.scores[ti];
+    const r = rng(1000 + ti);
+    return s.scores[ti].map((row, pi) => row.map((v, h) => v ?? fakeScore(r, s.par[h], s.teams[ti].players[pi].hcp)));
+  }
+
+  teamCalc(ti) {
+    const s = this.view(), f = s.format, sc = this.scoresFor(ti), pl = s.teams[ti].players;
+    const holes = s.par.map((par, h) => {
+      const gross = sc.map(row => row[h]);
+      const strokes = pl.map(p => strokesOn(+p.hcp || 0, s.si[h]));
+      const complete = gross.every(v => v != null);
+      const net = gross.map((g, i) => g == null ? null : g - strokes[i]);
+      const birdies = gross.reduce((a, g) => a + (g == null ? 0 : g <= par - 2 ? 2 : g === par - 1 ? 1 : 0), 0);
+      const pick = (arr, n) => arr.map((v, i) => [v, i]).filter(x => x[0] != null).sort((a, b) => a[0] - b[0]).slice(0, n);
+      let tg = null, tn = null, gIdx = [], nIdx = [];
+      if (complete && f === 'gn') {
+        let best = null;
+        gross.forEach((g, i) => net.forEach((n, j) => { if (i !== j && (!best || g + n < best[0] || (g + n === best[0] && g < best[1]))) best = [g + n, g, n, i, j]; }));
+        tg = best[1]; tn = best[2]; gIdx = [best[3]]; nIdx = [best[4]];
+      } else if (complete) {
+        if (f !== 'nn') { const p = pick(gross, f === 'gg' ? 2 : 1); tg = p.reduce((a, x) => a + x[0], 0); gIdx = p.map(x => x[1]); }
+        if (f !== 'gg') { const p = pick(net, f === 'nn' ? 2 : 1); tn = p.reduce((a, x) => a + x[0], 0); nIdx = p.map(x => x[1]); }
+      }
+      const tt = complete ? (tg || 0) + (tn || 0) : null;
+      return { par, gross, net, strokes, complete, birdies, tg, tn, tt, gIdx, nIdx };
+    });
+    const span = (from, len) => {
+      const hs = holes.slice(from, from + len).filter(h => h.complete);
+      return { started: hs.length > 0, done: hs.length === len, total: hs.reduce((a, h) => a + h.tt, 0), rel: hs.reduce((a, h) => a + h.tt - h.par * 2, 0) };
+    };
+    return { holes, thru: holes.filter(h => h.complete).length, birdies: holes.reduce((a, h) => a + h.birdies, 0),
+      fo: span(0, 9), bo: span(9, 9), to: span(0, 18) };
+  }
+
+  playersVals(s) {
+    const q = (s.search || '').trim().toLowerCase();
+    const teamOf = {}; s.teams.forEach(t => t.players.forEach(p => { if (p.pid) teamOf[p.pid] = t.name; }));
+    const live = s.inProgress !== false;
+    const fmtIdx = v => v === '' || v == null ? '—' : (+v).toFixed(1);
+    const list = s.roster.slice().sort(byName).filter(r => !q || r.name.toLowerCase().includes(q));
+    const draft = s.draft || { name: '', index: '' };
+    return {
+      isPlayers: s.screen === 'players', search: s.search || '',
+      setSearch: e => { const v = e.target.value; this.setState({ search: v }); },
+      adding: !!s.adding, openAdd: () => this.setState({ adding: true, editingId: null, draft: { name: '', index: '' } }), closeAdd: () => this.setState({ adding: false }),
+      draftName: draft.name, draftIndex: draft.index, draftInvalid: !draft.name.trim(),
+      setDraftName: e => { const v = e.target.value; this.setState(st => ({ draft: Object.assign({}, st.draft, { name: v }) })); },
+      setDraftIndex: e => { const v = e.target.value; this.setState(st => ({ draft: Object.assign({}, st.draft, { index: v }) })); },
+      saveDraft: () => { if (!draft.name.trim()) return; const row = { id: uuid(), name: draft.name.trim(), index: draft.index === '' ? '' : +draft.index }; this.mut(n => { n.roster.push(row); n.adding = false; n.draft = null; }); this.queue('pA' + row.id, () => this.sb.from('players').insert({ id: row.id, name: row.name, hcp_index: row.index === '' ? null : row.index })); },
+      rosterCount: q ? list.length + ' of ' + s.roster.length + ' players' : s.roster.length + ' players',
+      noMatches: list.length === 0, noMatchText: s.roster.length ? 'No players match “' + (s.search || '') + '”.' : 'No players yet. Add your group to build teams faster.',
+      playerRows: list.map(r => {
+        const editing = s.editingId === r.id, tm = teamOf[r.id];
+        return { name: r.name, index: fmtIdx(r.index), indexRaw: r.index, viewing: !editing, editing,
+          team: tm ? (live ? 'Playing today · Team ' + tm : 'Team ' + tm) : 'Not on a team',
+          teamFg: tm ? 'var(--color-accent-700)' : 'var(--color-text)', teamW: tm ? 700 : 400,
+          edit: () => this.setState({ editingId: r.id, adding: false }), done: () => this.setState({ editingId: null }),
+          setName: e => { const v = e.target.value; this.mutRoster(r.id, x => x.name = v); if (v.trim()) this.queue('pN' + r.id, () => this.sb.from('players').update({ name: v.trim() }).eq('id', r.id), 500); },
+          setIndex: e => { const v = e.target.value; this.mutRoster(r.id, x => x.index = v === '' ? '' : +v); this.queue('pI' + r.id, () => this.sb.from('players').update({ hcp_index: v === '' ? null : +v }).eq('id', r.id), 500); },
+          remove: () => { this.mut(n => { n.roster = n.roster.filter(x => x.id !== r.id); n.teams.forEach(t => t.players.forEach(p => { if (p.pid === r.id) p.pid = null; })); n.editingId = null; }); this.queue('pD' + r.id, () => this.sb.from('players').delete().eq('id', r.id)); } };
+      }),
+    };
+  }
+
+  prizes() {
+    return [{ key: 'bird', label: 'Most birdies' }, { key: 'fo', label: 'Front 9 overall' }, { key: 'bo', label: 'Back 9 overall' }, { key: 'to', label: '18-hole overall' }];
+  }
+
+  winners(calcs, key) {
+    if (key === 'bird') {
+      const m = Math.max(...calcs.map(c => c.birdies));
+      return m > 0 ? { idx: calcs.map((c, i) => c.birdies === m ? i : -1).filter(i => i >= 0), value: m + (m === 1 ? ' birdie' : ' birdies') } : { idx: [], value: '' };
+    }
+    const st = calcs.map((c, i) => [c[key], i]).filter(x => x[0].started);
+    if (!st.length) return { idx: [], value: '' };
+    const m = Math.min(...st.map(x => x[0].rel));
+    return { idx: st.filter(x => x[0].rel === m).map(x => x[1]), value: toPar(m) };
+  }
+
+  renderVals() {
+    const v = this.vals(), st = this.state;
+    if (st.loading) Object.assign(v, { isScore: false, isPick: false, isBoard: false, isDetail: false, isPay: false, isSetup: false, isPlayers: false, noEvent: false });
+    v.isLoading = !!st.loading; v.hasSyncError = !!st.syncError; v.syncError = st.syncError || '';
+    v.retrySync = () => { this.setState({ syncError: '' }); this.refetch(); };
+    return v;
+  }
+
+  vals() {
+    const s = this.view(), f = s.format;
+    const live = s.inProgress !== false;
+    const hasTeam = s.myTeam != null && s.myTeam < s.teams.length; const myTeam = hasTeam ? s.myTeam : 0;
+    const calcs = s.teams.map((_, i) => this.teamCalc(i));
+    const final = calcs.every(c => c.thru === 18);
+    const prizes = this.prizes();
+    const nTeams = s.teams.length, pot = nTeams * 4 * (+s.buyIn || 0), per = pot / prizes.length;
+    const go = screen => () => this.setState({ screen, menuOpen: false });
+    const tName = i => 'Team ' + s.teams[i].name;
+    const finished = calcs.filter(c => c.thru === 18).length;
+
+    const h = s.hole, mc = calcs[myTeam], mh = mc.holes[h];
+    const titles = { players: 'Players', score: 'Scorecard', board: 'Leaderboard', pay: 'Payouts', setup: 'Event setup', detail: tName(s.detail) };
+    const status = !live && s.screen !== 'setup' && s.screen !== 'players' ? '' : { score: hasTeam ? 'Thru ' + mc.thru : '', board: final ? 'Final' : finished + ' of ' + nTeams + ' finished', pay: final ? 'Final' : 'Round in progress', setup: '', players: s.roster.length + ' saved', detail: '' }[s.screen];
+
+    const holeStrip = s.par.map((_, i) => ({ n: i + 1, go: () => this.setState({ hole: i }),
+      bg: i === h ? 'var(--color-accent)' : mc.holes[i].complete ? 'var(--color-text)' : 'transparent',
+      fg: i === h || mc.holes[i].complete ? 'var(--color-bg)' : 'var(--color-text)' }));
+
+    const setScore = (pi, fn) => () => {
+      const v0 = this.state.scores[myTeam][pi][h], v = fn(v0 == null ? s.par[h] : v0), ep = s.teams[myTeam].players[pi].epId, evId = s.eventId;
+      this.mut(n => { n.scores[myTeam][pi][h] = v; });
+      if (ep) this.queue('s' + ep + '_' + h, () => this.sb.from('scores').upsert({ event_player_id: ep, event_id: evId, hole: h + 1, strokes: v }), 300);
+    };
+    const entryRows = s.teams[myTeam].players.map((p, pi) => {
+      const g = mh.gross[pi], st = mh.strokes[pi];
+      return { name: p.name, hcp: 'HCP ' + p.hcp + ' · ' + p.teeName, strokes: st ? '•'.repeat(st) + ' stroke' + (st > 1 ? 's' : '') : '',
+        net: g == null ? '' : 'Net ' + (g - st), score: g ?? '—',
+        color: g != null && g < mh.par ? 'var(--color-accent-700)' : 'var(--color-text)',
+        tags: (mh.gIdx.includes(pi) ? [{ t: f === 'gg' ? 'Gross ball' : 'Best gross' }] : []).concat(mh.nIdx.includes(pi) ? [{ t: f === 'nn' ? 'Net ball' : 'Best net' }] : []),
+        cellBg: mh.gIdx.includes(pi) || mh.nIdx.includes(pi) ? 'var(--color-accent-100)' : 'transparent',
+        ring: g != null && g <= mh.par - 1 ? '2px solid currentColor' : '2px solid transparent',
+        ring2: g != null && g <= mh.par - 2 ? '2px solid currentColor' : 'none',
+        fill: () => { if (g == null) setScore(pi, v => v)(); }, dec: setScore(pi, v => Math.max(1, v - 1)), inc: setScore(pi, v => Math.min(15, v + 1)) };
+    });
+    const dash = v => mh.complete ? v : '—';
+    const holeSummary = [];
+    if (f !== 'nn') holeSummary.push({ label: f === 'gg' ? 'Best 2 gross' : 'Best gross', val: dash(mh.tg) });
+    if (f !== 'gg') holeSummary.push({ label: f === 'nn' ? 'Best 2 net' : 'Best net', val: dash(mh.tn) });
+    holeSummary.push({ label: 'Birdies', val: mh.birdies });
+
+    const nineKeys = prizes.filter(p => p.key !== 'bird').map(p => p.key);
+    const lead = {}; prizes.forEach(p => lead[p.key] = this.winners(calcs, p.key));
+    const hdName = { fo: ['Front', '9'], bo: ['Back', '9'], to: ['18', 'Holes'] };
+    const cell = (t, isLead) => ({ t, bg: isLead ? 'var(--color-accent-100)' : 'transparent', fg: isLead ? 'var(--color-accent-800)' : 'var(--color-text)', w: isLead ? 800 : 500 });
+    const boardRows = calcs.map((c, i) => ({ c, i })).sort((a, b) => (a.c.to.started ? a.c.to.rel : 999) - (b.c.to.started ? b.c.to.rel : 999) || b.c.thru - a.c.thru || a.i - b.i).map(({ c, i }) => ({
+      name: s.teams[i].name, bg: hasTeam && i === myTeam ? 'var(--color-neutral-200)' : 'transparent', open: () => this.setState({ screen: 'detail', detail: i }),
+      cells: [cell(c.thru === 18 ? 'F' : c.thru, false), cell(c.birdies, lead.bird.idx.includes(i))]
+        .concat(nineKeys.map(k => cell(c[k].started ? toPar(c[k].rel) : '—', lead[k].idx.includes(i)))) }));
+    const prizeLeaders = prizes.map(p => ({ label: p.label, winners: lead[p.key].idx.length ? lead[p.key].idx.map(i => s.teams[i].name).join(' / ') : '—', value: lead[p.key].value || 'No score yet' }));
+
+    const dc = calcs[s.detail], dpl = s.teams[s.detail].players;
+    const teamCols = f === 'gn' ? ['G', 'N'] : f === 'gg' ? ['G'] : ['N'];
+    const head = { t: '', fg: 'var(--color-text)', w: 800, sub: '' };
+    const C = (t, o = {}) => Object.assign({ t, fg: 'var(--color-text)', w: 500, sub: '' }, o);
+    const ini = n => n.split(' ').map(x => x[0]).join('');
+    const cardRows = [{ bg: 'transparent', rule: '2px solid var(--color-text)', cells: [C('Hole', { w: 800 }), C('Par', { w: 800 })].concat(dpl.map(p => C(ini(p.name), { w: 800 })), teamCols.map(x => C(x, { w: 800 }))) }];
+    const sumRow = (label, from, to) => {
+      const hs = dc.holes.slice(from, to);
+      const tot = k => hs.every(x => x[k] != null) ? hs.reduce((a, x) => a + x[k], 0) : '';
+      return { bg: 'var(--color-surface)', rule: '2px solid var(--color-text)', cells: [C(label, { w: 800 }), C(hs.reduce((a, x) => a + x.par, 0), { w: 800 })]
+        .concat(dpl.map((_, pi) => C(hs.every(x => x.gross[pi] != null) ? hs.reduce((a, x) => a + x.gross[pi], 0) : '', { w: 800 })),
+          teamCols.map(k => C(tot(k === 'G' ? 'tg' : 'tn'), { w: 800 }))) };
+    };
+    dc.holes.forEach((x, i) => {
+      cardRows.push({ bg: 'transparent', rule: '1px solid var(--color-divider)', cells: [C(i + 1, { w: 700 }), C(x.par)].concat(
+        x.gross.map((g, pi) => C(g ?? '', { sub: '•'.repeat(x.strokes[pi]), w: x.gIdx.includes(pi) || x.nIdx.includes(pi) ? 800 : 400, fg: g != null && g < x.par ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+        teamCols.map(k => C(k === 'G' ? (x.tg ?? '') : (x.tn ?? ''), { w: 800 }))) });
+      if (i === 8) cardRows.push(sumRow('Out', 0, 9));
+    });
+    cardRows.push(sumRow('In', 9, 18), sumRow('Tot', 0, 18));
+
+    const won = s.teams.map(() => 0);
+    const prizeRows = prizes.map(p => {
+      const w = lead[p.key];
+      w.idx.forEach(i => won[i] += per / w.idx.length);
+      return { label: p.label, winners: w.idx.length ? w.idx.map(i => s.teams[i].name).join(' / ') + (w.idx.length > 1 ? ' (tie)' : '') : 'No winner yet', value: w.value, amount: w.idx.length > 1 ? money(per / w.idx.length) + ' each' : money(per) };
+    });
+    const nf = v => v > 0 ? 'var(--color-accent-700)' : 'var(--color-text)';
+    const payGroups = s.teams.map((t, i) => {
+      const pw = won[i] / 4, pn = pw - (+s.buyIn || 0);
+      return { team: tName(i), won: money(won[i]), net: (pn * 4 > 0 ? '+' : '') + money(pn * 4), netFg: nf(pn),
+        players: t.players.map(p => ({ name: p.name, won: money(pw), net: (pn > 0 ? '+' : '') + money(pn), netFg: nf(pn) })) };
+    }).sort((a, b) => parseFloat(b.won.replace(/[^0-9.]/g, '')) - parseFloat(a.won.replace(/[^0-9.]/g, '')));
+
+    const courseCells = [];
+    [0, 9].forEach(from => {
+      courseCells.push({ label: true, edit: false, v: 'Hole', w: 800 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: true, edit: false, v: i + 1, w: 800 });
+      courseCells.push({ label: true, edit: false, v: 'Par', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: s.par[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.par[i] = v); this.pushCourse(); } });
+      courseCells.push({ label: true, edit: false, v: 'SI', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: s.si[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.si[i] = v); this.pushCourse(); } });
+    });
+
+    return {
+      course: s.course, formatLabel: FORMATS[f], title: titles[s.screen], statusLine: status,
+      isScore: live && s.screen === 'score' && hasTeam, isPick: live && s.screen === 'score' && !hasTeam,
+      noEvent: !live && s.screen !== 'setup' && s.screen !== 'players', goSetup: go('setup'), inProgress: live, notInProgress: !live,
+      eventTag: live ? 'Event in progress' : 'No event in progress', eventTagClass: live ? 'tag-accent' : 'tag-neutral',
+      idle: !s.confirmNew && !s.confirmEnd, confirmingEnd: !!s.confirmEnd,
+      askEnd: () => this.setState({ confirmEnd: true, confirmNew: false }), endEvent: () => { const id = s.eventId; this.setState({ inProgress: false, confirmEnd: false, myTeam: null }); if (id) this.queue('end', () => this.sb.from('events').update({ in_progress: false, ended_at: new Date().toISOString() }).eq('id', id)); },
+      pickTeams: s.teams.map((t, i) => ({ name: tName(i), players: t.players.map(p => p.name).filter(Boolean).join(', ') || 'No players yet', meta: calcs[i].thru === 18 ? 'Finished' : calcs[i].thru ? 'Thru ' + calcs[i].thru : '',
+        bg: 'transparent', pick: () => { const first = calcs[i].holes.findIndex(x => !x.complete); saveUI({ teamId: t.id, eventId: s.eventId }); this.setState({ myTeam: i, hole: first < 0 ? 17 : first }); } })),
+      changeTeam: () => { saveUI({ teamId: null }); this.setState({ myTeam: null }); }, isBoard: live && s.screen === 'board', isDetail: live && s.screen === 'detail', isPay: live && s.screen === 'pay', isSetup: s.screen === 'setup',
+      holeStrip, holeTotal: mh.complete ? (mh.tt - mh.par * 2 === 0 ? 'Even' : toPar(mh.tt - mh.par * 2)) : '—',
+      holeTotalFg: mh.complete && mh.tt < mh.par * 2 ? 'var(--color-accent-700)' : 'var(--color-text)',
+      holeNo: h + 1, holePar: mh.par, holeSi: s.si[h], entryRows, holeSummary,
+      prevHole: () => this.setState({ hole: (h + 17) % 18 }), nextHole: () => h === 17 ? this.setState({ screen: 'board' }) : this.setState({ hole: h + 1 }),
+      nextLabel: h === 17 ? 'Finish · Leaderboard →' : 'Next hole →',
+      prizeLeaders, boardRows, boardCols: 'minmax(0,1.5fr) repeat(' + (2 + nineKeys.length) + ',minmax(0,1fr))',
+      boardHead: [{ a: 'Team', b: '' }, { a: 'Thru', b: '' }, { a: 'Bird', b: 'ies' }].concat(nineKeys.map(k => ({ a: hdName[k][0], b: hdName[k][1] }))),
+      backToBoard: go('board'), detailThru: dc.thru === 18 ? 'Finished' : 'Thru ' + dc.thru,
+      detailPlayers: dpl.map(p => ({ ini: ini(p.name), name: p.name, hcp: p.hcp })),
+      cardRows, cardCols: '44px 36px repeat(4,minmax(0,1fr)) repeat(' + teamCols.length + ',minmax(0,1fr))',
+      potCells: [{ label: 'Pot', val: money(pot) }, { label: 'Per prize', val: money(per) }, { label: 'Buy-in', val: money(+s.buyIn || 0) }],
+      buyInLabel: money(+s.buyIn || 0), notFinal: !final, isFinal: final, finishedLine: finished + ' of ' + nTeams + ' teams have finished 18 holes.', prizeRows, payGroups,
+      buyIn: s.buyIn, myTeamName: hasTeam ? tName(myTeam) : 'Not chosen yet',
+      setCourse: e => { const v = e.target.value, id = s.crs.id; this.mutCourse(c => c.name = v); if (id) this.queue('cn' + id, () => this.sb.from('courses').update({ name: v }).eq('id', id), 500); },
+      courseList: s.courses.map(c => { const on = c.id === s.courseId; return { name: c.name, home: !!c.home, meta: 'Par ' + c.par.reduce((a, b) => a + b, 0), pick: () => this.pickCourse(c.id), bg: on ? 'var(--color-surface)' : 'transparent', dot: on ? 'var(--color-text)' : 'transparent', w: on ? 800 : 500 }; }),
+      addCourse: () => {
+        const id = uuid(), par = Array(18).fill(4), si = SI_DEFAULT.slice(), tees = DEFAULT_TEES();
+        if (live) { this.fail('Courses can be added when no event is in progress.'); return; }
+        this.mut(n => { n.courses.push({ id, name: 'New course', home: false, par, si, tees }); n.courseId = id; });
+        this.queue('ac' + id, async () => { const r = await this.sb.from('courses').insert({ id, name: 'New course', is_home: false, par, stroke_index: si }); if (r.error) return r; return this.sb.from('tees').insert(tees.map((t, i) => ({ id: t.id, course_id: id, name: t.name, rating: t.rating, slope: t.slope, sort: i }))); });
+      },
+      isHome: !!s.crs.home, notHome: !s.crs.home, canDelete: !s.crs.home && s.courses.length > 1,
+      setHome: () => { const id = s.crs.id; this.mut(n => n.courses.forEach(c => c.home = c.id === id)); if (id) this.queue('home', async () => { const r = await this.sb.from('courses').update({ is_home: false }).eq('is_home', true).neq('id', id); if (r.error) return r; return this.sb.from('courses').update({ is_home: true }).eq('id', id); }); },
+      deleteCourse: () => { const id = s.crs.id; this.mut(n => { n.courses = n.courses.filter(c => c.id !== id); n.courseId = (n.courses.find(c => c.home) || n.courses[0]).id; }); if (id) { this.needRefetch = true; this.queue('dc' + id, () => this.sb.from('courses').delete().eq('id', id)); } },
+      siWarning: (() => { const set = new Set(s.si); return set.size === 18 && s.si.every(v => v >= 1 && v <= 18) ? '' : 'Stroke index should use each number 1–18 once.'; })(),
+      setBuyIn: e => { const v = e.target.value; this.setState({ buyIn: v }); if (live && s.eventId) this.queue('bi', () => this.sb.from('events').update({ buy_in: +v || 0 }).eq('id', s.eventId), 500); },
+      formatOpts: Object.keys(FORMATS).map(k => ({ label: FORMATS[k], pick: () => { this.setState({ format: k }); if (live && s.eventId) this.queue('fmt', () => this.sb.from('events').update({ format: k }).eq('id', s.eventId)); }, bg: k === f ? 'var(--color-text)' : 'transparent', fg: k === f ? 'var(--color-bg)' : 'var(--color-text)' })),
+      formatHelp: { gn: 'Each hole counts the team\u2019s best gross ball and best net ball. Prizes: birdies, front 9, back 9, 18 holes.', gg: 'Each hole counts the team\u2019s two best gross balls. Prizes: birdies, front 9, back 9, 18 holes.', nn: 'Each hole counts the team\u2019s two best net balls. Prizes: birdies, front 9, back 9, 18 holes.' }[f],
+      ...this.playersVals(s),
+      goPlayers: go('players'),
+      setupTeams: s.teams.map((t, ti) => ({ name: t.name, setName: e => { const v = e.target.value; this.mut(n => n.teams[ti].name = v); if (t.id) this.queue('tn' + t.id, () => this.sb.from('event_teams').update({ name: v }).eq('id', t.id), 500); },
+        players: t.players.map((p, pi) => ({ name: p.name, hcp: p.pid ? p.hcp : '', index: p.pid ? p.index : '', tee: String(p.tee), pid: p.pid || '',
+          opts: [{ v: '', label: 'Choose player', dis: false }].concat(s.roster.slice().sort(byName).map(r => { const used = s.teams.some((t2, a) => t2.players.some((p2, b) => p2.pid === r.id && !(a === ti && b === pi))); return { v: r.id, label: r.name + (used ? ' (on a team)' : ''), dis: used }; })),
+          setPid: e => { const v = e.target.value; this.mut(n => n.teams[ti].players[pi].pid = v || null); if (p.epId) this.queue('pp' + p.epId, () => this.sb.from('event_players').update({ player_id: v || null }).eq('id', p.epId)); },
+          setTee: e => { const v = +e.target.value, tee = s.crs.tees[v]; this.mut(n => n.teams[ti].players[pi].tee = v); if (p.epId && tee && tee.id) this.queue('pt' + p.epId, () => this.sb.from('event_players').update({ tee_id: tee.id }).eq('id', p.epId)); },
+          })) })),
+      teeOpts: s.crs.tees.map((t, i) => ({ v: String(i), label: t.name })),
+      teeRows: s.crs.tees.map((t, i) => ({ name: t.name, rating: t.rating, slope: t.slope,
+        setName: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].name = v); if (t.id) this.queue('tN' + t.id, () => this.sb.from('tees').update({ name: v }).eq('id', t.id), 500); },
+        setRating: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].rating = v === '' ? '' : +v); if (t.id && v !== '') this.queue('tR' + t.id, () => this.sb.from('tees').update({ rating: +v }).eq('id', t.id), 500); },
+        setSlope: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].slope = v === '' ? '' : +v); if (t.id && v !== '') this.queue('tS' + t.id, () => this.sb.from('tees').update({ slope: +v }).eq('id', t.id), 500); },
+        remove: () => { if (s.crs.tees.length < 2) return; this.mutCourse(c => c.tees.splice(i, 1)); if (t.id) this.queue('tD' + t.id, () => this.sb.from('tees').delete().eq('id', t.id)); } })),
+      addTee: () => { const id = uuid(), cid = s.crs.id, rating = s.par.reduce((a, b) => a + b, 0), sort = s.crs.tees.length; if (!cid) return; this.mutCourse(c => c.tees.push({ id, name: 'New tees', rating, slope: 113 })); this.queue('tA' + id, () => this.sb.from('tees').insert({ id, course_id: cid, name: 'New tees', rating, slope: 113, sort })); },
+      confirming: !!s.confirmNew, notConfirming: !s.confirmNew, newBg: s.confirmNew || s.confirmEnd ? 'var(--color-accent-100)' : 'transparent',
+      askNew: () => this.setState({ confirmNew: true, confirmEnd: false }), cancelNew: () => this.setState({ confirmNew: false, confirmEnd: false }),
+      newKeep: () => this.startNew(),
+      courseCells,
+      menuOpen: !!s.menuOpen, toggleMenu: () => this.setState(st => ({ menuOpen: !st.menuOpen })),
+      menuBtnBg: s.menuOpen ? 'var(--color-text)' : 'transparent', menuBtnFg: s.menuOpen ? 'var(--color-bg)' : 'var(--color-text)',
+      menuIconPath: s.menuOpen ? 'M6 6l12 12M18 6L6 18' : 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+      menuItems: [['setup', 'Event setup', (live ? 'Event in progress' : 'No event in progress') + ' · ' + s.course], ['players', 'Players', s.roster.length + ' saved players']].map(([k, label, meta]) => ({ label, meta, go: go(k), bar: s.screen === k ? 'var(--color-accent)' : 'transparent' })),
+      navItems: [['score', 'Score'], ['board', 'Board'], ['pay', 'Payouts']].map(([k, label]) => {
+        const on = s.screen === k || (k === 'board' && s.screen === 'detail');
+        return { label, go: go(k), bar: on ? 'var(--color-accent)' : 'transparent', w: on ? 800 : 500 };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
