@@ -3,6 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fourball</title>
+<meta name="theme-color" content="#f3f2f2">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fourball">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+// Installable app: register the service worker on the deployed site only
+// (not inside the design canvas, which runs the page in a frame).
+if ('serviceWorker' in navigator && window.top === window.self && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -12,22 +27,37 @@
 <script src="_ds/modernist-cf8d7cfc-b9c0-4def-9741-cbdd89be2e6e/_ds_bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;display=swap">
-<style>body{margin:0;background:var(--color-surface);font-family:var(--font-body);color:var(--color-text)}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}*{box-sizing:border-box}button{font-family:inherit}</style>
+<style>body{margin:0;background:var(--color-surface);font-family:var(--font-body);color:var(--color-text)}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}*{box-sizing:border-box}button{font-family:inherit}@keyframes fb-slide{from{transform:translateX(-100%)}to{transform:none}}@keyframes fb-fade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){nav[aria-label="Menu"],button[aria-label="Close menu"]{animation:none!important}}</style>
 </helmet>
 <div style="max-width:440px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);font-variant-numeric:tabular-nums;border-left:2px solid var(--color-text);border-right:2px solid var(--color-text)">
 
-  <header style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:var(--space-3);padding:var(--space-6) var(--space-4) var(--space-4);border-bottom:2px solid var(--color-text)">
+  <header style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-6) var(--space-4) var(--space-4);border-bottom:2px solid var(--color-text)">
+    <button onClick="{{ toggleMenu }}" aria-label="Open menu" aria-expanded="{{ menuOpen }}" style="width:44px;height:44px;margin-left:-12px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="color:var(--color-accent-700)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
     <div style="display:flex;flex-direction:column;gap:var(--space-1);min-width:0">
-      <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ course }} · {{ formatLabel }}</div>
       <div style="font-family:var(--font-heading);font-weight:800;font-size:32px;line-height:1;letter-spacing:-.02em">{{ title }}</div>
     </div>
     <div style="font-size:12px;font-weight:600;text-align:right;line-height:1.3;white-space:nowrap">{{ statusLine }}</div>
-    <button onClick="{{ toggleMenu }}" aria-label="Settings" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid var(--color-text);background:{{ menuBtnBg }};color:{{ menuBtnFg }};cursor:pointer;padding:0">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ menuIconPath }}"></path></svg>
-    </button>
   </header>
+  <sc-if value="{{ updateReady }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ applyUpdate }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:56px;border:0;border-bottom:2px solid var(--color-text);background:var(--color-accent-100);color:var(--color-text);text-align:left;padding:0 var(--space-4) 0 0;cursor:pointer" style-hover="background:var(--color-accent-200)">
+      <span style="align-self:stretch;background:var(--color-accent)"></span>
+      <span style="font-size:16px;font-weight:800">Update ready</span>
+      <span style="font-size:14px;font-weight:700;color:var(--color-accent-700)">Tap to reload</span>
+    </button>
+  </sc-if>
   <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
-    <div style="display:flex;flex-direction:column;border-bottom:2px solid var(--color-text);background:var(--color-bg)">
+    <div style="position:fixed;inset:0;z-index:50;display:flex;justify-content:center">
+      <div style="position:relative;width:100%;max-width:440px;height:100%;overflow:hidden">
+        <button onClick="{{ closeMenu }}" aria-label="Close menu" tabindex="-1" style="position:absolute;inset:0;border:0;padding:0;margin:0;background:rgba(0,0,0,.45);cursor:pointer;animation:fb-fade .18s ease-out"></button>
+        <nav aria-label="Menu" style="position:absolute;top:0;bottom:0;left:0;width:min(300px,82%);display:flex;flex-direction:column;background:var(--color-bg);border-right:2px solid var(--color-text);border-left:2px solid var(--color-text);box-shadow:8px 0 24px rgba(0,0,0,.18);animation:fb-slide .22s ease-out">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-6) var(--space-4) var(--space-4);border-bottom:2px solid var(--color-text)">
+            <div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1;letter-spacing:-.02em">Menu</div>
+            <button onClick="{{ closeMenu }}" aria-label="Close menu" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid var(--color-text);background:var(--color-text);color:var(--color-bg);cursor:pointer;padding:0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+          </div>
       <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="2">
         <button onClick="{{ m.go }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:64px;border:0;border-bottom:1px solid var(--color-divider);background:transparent;color:var(--color-text);text-align:left;padding:0 var(--space-4) 0 0;cursor:pointer" style-hover="background:var(--color-accent-100)">
           <span style="align-self:stretch;background:{{ m.bar }}"></span>
@@ -35,6 +65,8 @@
           <span style="font-size:20px;font-weight:700">→</span>
         </button>
       </sc-for>
+        </nav>
+      </div>
     </div>
   </sc-if>
 
@@ -68,6 +100,9 @@
           <span style="font-size:13px;font-weight:700;white-space:nowrap">{{ t.meta }}</span>
         </button>
       </sc-for>
+      <sc-if value="{{ noPickTeams }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:var(--space-4);font-size:14px;line-height:1.4">No teams have players yet. Add players to teams in Event setup.</div>
+      </sc-if>
     </sc-if>
 
     <sc-if value="{{ isScore }}" hint-placeholder-val="{{ true }}">
@@ -90,15 +125,24 @@
       </div>
 
       <sc-for list="{{ entryRows }}" as="r" hint-placeholder-count="4">
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-divider)">
-          <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
-            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)"><span style="font-weight:700;font-size:17px">{{ r.name }}</span><sc-for list="{{ r.tags }}" as="tg" hint-placeholder-count="0"><span class="tag tag-accent" style="white-space:nowrap">{{ tg.t }}</span></sc-for></div>
-            <div style="font-size:13px;display:flex;flex-wrap:wrap;column-gap:var(--space-2);row-gap:2px"><span style="white-space:nowrap">{{ r.hcp }}</span><span style="color:var(--color-accent-700);font-weight:700;white-space:nowrap">{{ r.strokes }}</span><span style="white-space:nowrap">{{ r.net }}</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-divider)">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0;align-self:center;padding-top:26px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)"><span style="font-weight:700;font-size:17px">{{ r.name }}</span><span aria-label="{{ r.strokesLabel }}" style="color:var(--color-accent-700);font-weight:800;font-size:17px;letter-spacing:1px;line-height:1">{{ r.dots }}</span></div>
+            <div style="font-size:13px;display:flex;flex-wrap:wrap;column-gap:var(--space-2);row-gap:2px"><span style="white-space:nowrap">{{ r.hcp }}</span></div>
           </div>
-          <div style="display:grid;grid-template-columns:48px 56px 48px;border:2px solid var(--color-text);margin-top:var(--space-1)">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-1)">
+          <div style="min-height:22px;display:flex;justify-content:flex-end;align-items:center;gap:var(--space-1)"><sc-for list="{{ r.tags }}" as="tg" hint-placeholder-count="0"><span class="tag tag-accent" style="white-space:nowrap">{{ tg.t }}</span></sc-for></div>
+          <div style="display:flex;align-items:center;gap:var(--space-2)">
+          <div aria-label="{{ r.netLabel }}" style="width:44px;display:flex;flex-direction:column;align-items:center;gap:1px;opacity:{{ r.netOpacity }};transition:opacity .2s">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em" aria-hidden="true">Net</span>
+            <span aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;color:{{ r.netColor }};border-radius:{{ r.netRadius }};border:{{ r.netRing }};outline:{{ r.netRing2 }};outline-offset:2px">{{ r.netScore }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:48px 56px 48px;border:2px solid var(--color-text)">
             <button onClick="{{ r.dec }}" style="height:48px;border:0;border-right:2px solid var(--color-text);background:transparent;font-size:24px;font-weight:600;cursor:pointer;color:var(--color-text)">−</button>
-            <button onClick="{{ r.fill }}" style="height:48px;border:0;background:{{ r.cellBg }};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:{{ r.color }};cursor:pointer;font-variant-numeric:tabular-nums;padding:0"><span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:{{ r.ring }};outline:{{ r.ring2 }};outline-offset:2px">{{ r.score }}</span></button>
+            <button onClick="{{ r.fill }}" style="height:48px;border:0;background:{{ r.cellBg }};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:{{ r.color }};cursor:pointer;font-variant-numeric:tabular-nums;padding:0"><span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:{{ r.radius }};border:{{ r.ring }};outline:{{ r.ring2 }};outline-offset:2px;opacity:{{ r.grossOpacity }};transition:opacity .2s">{{ r.score }}</span></button>
             <button onClick="{{ r.inc }}" style="height:48px;border:0;border-left:2px solid var(--color-text);background:transparent;font-size:24px;font-weight:600;cursor:pointer;color:var(--color-text)">+</button>
+          </div>
+          </div>
           </div>
         </div>
       </sc-for>
@@ -145,7 +189,7 @@
         <button class="btn btn-ghost" onClick="{{ backToBoard }}">← Leaderboard</button>
         <div style="font-size:13px;font-weight:600">{{ detailThru }}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:2px solid var(--color-text)">
+      <div style="display:grid;grid-template-columns:{{ detailPlayerCols }};border-bottom:2px solid var(--color-text)">
         <sc-for list="{{ detailPlayers }}" as="p" hint-placeholder-count="4">
           <div style="padding:var(--space-3);border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
             <div style="font-size:20px;font-weight:800">{{ p.ini }}</div>
@@ -222,7 +266,7 @@
         <div style="border-bottom:1px solid var(--color-divider)">
           <sc-if value="{{ p.viewing }}" hint-placeholder-val="{{ true }}">
             <button onClick="{{ p.edit }}" style="display:grid;grid-template-columns:minmax(0,1fr) 72px;align-items:center;gap:var(--space-3);width:100%;min-height:60px;border:0;background:transparent;color:var(--color-text);text-align:left;padding:var(--space-2) var(--space-4);cursor:pointer" style-hover="background:var(--color-accent-100)">
-              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:17px;font-weight:700">{{ p.name }}</span><span style="font-size:13px;color:{{ p.teamFg }};font-weight:{{ p.teamW }}">{{ p.team }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:17px;font-weight:700">{{ p.name }}</span><sc-if value="{{ p.onTeam }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700);font-weight:700">{{ p.team }}</span></sc-if></span>
               <span style="font-size:24px;font-weight:800;text-align:right">{{ p.index }}</span>
             </button>
           </sc-if>
@@ -232,7 +276,6 @@
                 <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Name<input class="input" value="{{ p.name }}" onChange="{{ p.setName }}" style="min-width:0"></label>
                 <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;min-width:0">Index<input class="input" type="number" step="0.1" inputmode="decimal" value="{{ p.indexRaw }}" onChange="{{ p.setIndex }}" style="min-width:0"></label>
               </div>
-              <div style="font-size:13px">{{ p.team }}</div>
               <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-2)">
                 <button class="btn btn-primary" onClick="{{ p.done }}" style="height:48px">Done</button>
                 <button class="btn btn-ghost" onClick="{{ p.remove }}" style="height:48px">Remove</button>
@@ -266,7 +309,7 @@
         </sc-if>
         <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
           <div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">Start a new event?</div>
-          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with the current teams and players. Past events stay saved.</div>
+          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with one empty team. Add players and teams below. Past events stay saved.</div>
           <button class="btn btn-primary btn-block" onClick="{{ newKeep }}" style="height:52px">Start new event</button>
           <button class="btn btn-ghost" onClick="{{ cancelNew }}">Cancel</button>
         </sc-if>
@@ -299,7 +342,7 @@
         <span style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Teams</span>
         <button class="btn btn-ghost" onClick="{{ goPlayers }}" style="white-space:nowrap">Manage players →</button>
       </div>
-      <sc-for list="{{ setupTeams }}" as="t" hint-placeholder-count="4">
+      <sc-for list="{{ setupTeams }}" as="t" hint-placeholder-count="1">
         <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4);border-top:2px solid var(--color-text)">
           <input class="input" value="{{ t.name }}" onChange="{{ t.setName }}" placeholder="Team name" style="font-weight:800;font-size:17px">
           <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 92px 36px;gap:var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em"><span>Player</span><span>Idx</span><span>Tees</span><span>HCP</span></div>
@@ -317,6 +360,9 @@
           </sc-for>
         </div>
       </sc-for>
+      <div style="padding:0 var(--space-4) var(--space-4)">
+        <button class="btn btn-secondary btn-block" onClick="{{ addTeam }}" style="height:48px">+ Add team</button>
+      </div>
 
       <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-3);border-top:2px solid var(--color-text)">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Edit course · par and hole handicap (stroke index)</div>
@@ -357,7 +403,10 @@
 
   <nav style="position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--color-text);background:var(--color-bg)">
     <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
-      <button onClick="{{ n.go }}" style="height:60px;border:0;border-right:1px solid var(--color-divider);border-top:4px solid {{ n.bar }};background:transparent;text-align:left;padding:0 var(--space-4);font-size:15px;font-weight:{{ n.w }};color:var(--color-text);cursor:pointer">{{ n.label }}</button>
+      <button onClick="{{ n.go }}" aria-current="{{ n.current }}" style="height:72px;border:0;border-right:1px solid var(--color-divider);border-top:4px solid {{ n.bar }};background:transparent;text-align:center;padding:0 var(--space-2);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;font-size:15px;font-weight:{{ n.w }};color:var(--color-text);cursor:pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ n.sw }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:{{ n.ic }}"><path d="{{ n.icon }}"></path></svg>
+        <span>{{ n.label }}</span>
+      </button>
     </sc-for>
   </nav>
 </div>
@@ -372,7 +421,7 @@ const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xx
 const DEFAULT_TEES = () => [{ id: uuid(), name: 'Blue', rating: 72.4, slope: 131 }, { id: uuid(), name: 'White', rating: 70.1, slope: 125 }, { id: uuid(), name: 'Gold', rating: 67.8, slope: 117 }];
 const PLACEHOLDER_COURSE = { id: null, name: 'No course yet', home: false, par: Array(18).fill(4), si: SI_DEFAULT, tees: [{ id: null, name: '—', rating: 72, slope: 113 }] };
 const byName = (a, b) => a.name.localeCompare(b.name);
-const defaultTeams = () => [0, 1, 2, 3].map(i => ({ id: null, name: String(i + 1), players: [0, 1, 2, 3].map(() => ({ epId: null, pid: null, tee: 1 })) }));
+const defaultTeams = () => [0].map(i => ({ id: null, name: String(i + 1), players: [0, 1, 2, 3].map(() => ({ epId: null, pid: null, tee: 1 })) }));
 const emptyScores = teams => teams.map(t => t.players.map(() => Array(18).fill(null)));
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch (e) { return {}; } };
 const saveUI = patch => { try { localStorage.setItem(UIKEY, JSON.stringify(Object.assign(loadUI(), patch))); } catch (e) {} };
@@ -391,6 +440,7 @@ class Component extends DCLogic {
   state = (() => { const t = defaultTeams(); return { loading: true, syncError: '', screen: loadUI().screen || 'score', inProgress: false, eventId: null, myTeam: null, hole: 0, detail: 0, courses: [], courseId: null, buyIn: 20, format: 'gn', roster: [], teams: t, scores: emptyScores(t) }; })();
 
   componentDidMount() {
+    this.watchForUpdates();
     this.pending = 0; this.timers = {};
     const boot = () => {
       if (!window.supabase) { this.bootT = setTimeout(boot, 100); return; }
@@ -402,7 +452,38 @@ class Component extends DCLogic {
     };
     boot();
   }
-  componentWillUnmount() { clearTimeout(this.bootT); if (this.ch) this.sb.removeChannel(this.ch); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); }
+  // New-version check (deployed app only, not the design canvas): remember the page as it
+  // loaded, re-check when the app comes back to the foreground and every 5 minutes, and
+  // show "Update ready" when the deployed page differs. Never reloads on its own.
+  watchForUpdates() {
+    if (window.top !== window.self || location.protocol !== 'https:') return;
+    const url = 'Fourball.dc.html';
+    const sig = async () => {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) throw new Error('update check ' + r.status);
+      const t = await r.text(); let h = 2166136261;
+      for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619);
+      return (h >>> 0) + ':' + t.length;
+    };
+    this.checkUpdate = async () => {
+      if (this.state.updateReady || document.visibilityState !== 'visible') return;
+      try {
+        const now = await sig();
+        if (!this.loadedSig) this.loadedSig = now;
+        else if (now !== this.loadedSig) this.setState({ updateReady: true });
+      } catch (e) { /* offline: try again later */ }
+    };
+    this.checkUpdate();
+    this.updT = setInterval(this.checkUpdate, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', this.checkUpdate);
+    if ('serviceWorker' in navigator) {
+      const had = !!navigator.serviceWorker.controller;
+      this.onSwChange = () => { if (had) this.setState({ updateReady: true }); };
+      navigator.serviceWorker.addEventListener('controllerchange', this.onSwChange);
+    }
+  }
+
+  componentWillUnmount() { clearInterval(this.updT); if (this.checkUpdate) document.removeEventListener('visibilitychange', this.checkUpdate); if (this.onSwChange) navigator.serviceWorker.removeEventListener('controllerchange', this.onSwChange); clearTimeout(this.bootT); if (this.ch) this.sb.removeChannel(this.ch); if (this.onVis) document.removeEventListener('visibilitychange', this.onVis); }
   componentDidUpdate() { saveUI({ screen: this.state.screen }); }
 
   fail(err) {
@@ -489,9 +570,11 @@ class Component extends DCLogic {
     const s = this.state, home = s.courses.find(c => c.home) || s.courses[0];
     if (!home) { this.fail('Add a course before starting an event.'); return; }
     const evId = uuid(), tees = home.tees;
-    const teamRows = s.teams.map((t, i) => ({ id: uuid(), event_id: evId, position: i, name: t.name || String(i + 1) }));
+    // A new event starts clean: one team (Team 1), no players. Tees default to the second tee (or the only one).
+    const src = [{ name: '1', players: [0, 1, 2, 3].map(() => ({ pid: null, tee: Math.min(1, Math.max(0, tees.length - 1)) })) }];
+    const teamRows = src.map((t, i) => ({ id: uuid(), event_id: evId, position: i, name: t.name || String(i + 1) }));
     const epRows = [];
-    s.teams.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: p.pid || null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
+    src.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
     this.needRefetch = true;
     this.queue('start', async () => {
       let r = await this.sb.from('events').insert({ id: evId, course_id: home.id, buy_in: +s.buyIn || 0, format: s.format, in_progress: true }); if (r.error) return r;
@@ -500,8 +583,35 @@ class Component extends DCLogic {
     });
     saveUI({ teamId: null, eventId: evId });
     let k = 0;
-    const teams = s.teams.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: p.pid, tee: p.tee })) }));
-    this.setState({ eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'score' });
+    const teams = src.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: null, tee: p.tee })) }));
+    // Stay on Event setup so players can be added to the new teams.
+    this.setState({ revealed: [], eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'setup' });
+  }
+
+  // Teams shown in Event setup: those with players, those added with "Add team", and always the first.
+  // Empty teams saved by older versions (which always made 4) stay hidden until "Add team" reuses them.
+  shownTeams(st = this.state) {
+    const rev = st.revealed || [];
+    return st.teams.map((t, i) => i).filter(i => i === 0 || st.teams[i].players.some(p => p.pid) || rev.includes(st.teams[i].id || 'i' + i));
+  }
+
+  // Add an empty team (4 open player slots). During a live event it is saved straight away.
+  addTeam() {
+    const s = this.state, n = s.teams.length, shown = this.shownTeams();
+    const hidden = s.teams.findIndex((t, i) => !shown.includes(i));
+    if (hidden >= 0) { const key = s.teams[hidden].id || 'i' + hidden; this.setState(st => ({ revealed: (st.revealed || []).concat([key]) })); return; }
+    const used = s.teams.map(t => t.name); let k = n + 1; while (used.includes(String(k))) k++;
+    const name = String(k), live = s.inProgress && s.eventId;
+    const crs = s.courses.find(c => c.id === s.courseId), tees = crs ? crs.tees : [], tee = Math.min(1, Math.max(0, tees.length - 1));
+    const team = { id: live ? uuid() : null, name, players: [0, 1, 2, 3].map(() => ({ epId: live ? uuid() : null, pid: null, tee })) };
+    this.setState(st => ({ teams: st.teams.concat([team]), scores: st.scores.concat([team.players.map(() => Array(18).fill(null))]), revealed: (st.revealed || []).concat([team.id || 'i' + n]) }));
+    if (live) {
+      const evId = s.eventId, teeId = tees.length ? tees[tee].id : null;
+      this.queue('addTeam' + team.id, async () => {
+        const r = await this.sb.from('event_teams').insert({ id: team.id, event_id: evId, position: n, name }); if (r.error) return r;
+        return this.sb.from('event_players').insert(team.players.map((p, slot) => ({ id: p.epId, event_id: evId, team_id: team.id, slot, player_id: null, tee_id: teeId })));
+      });
+    }
   }
 
   pickCourse(id) {
@@ -531,22 +641,24 @@ class Component extends DCLogic {
     const s = this.view();
     if (!this.props.simulateComplete) return s.scores[ti];
     const r = rng(1000 + ti);
-    return s.scores[ti].map((row, pi) => row.map((v, h) => v ?? fakeScore(r, s.par[h], s.teams[ti].players[pi].hcp)));
+    return s.scores[ti].map((row, pi) => row.map((v, h) => v ?? (s.teams[ti].players[pi].pid ? fakeScore(r, s.par[h], s.teams[ti].players[pi].hcp) : null)));
   }
 
   teamCalc(ti) {
     const s = this.view(), f = s.format, sc = this.scoresFor(ti), pl = s.teams[ti].players;
+    // Only slots with a player count: a 3-player team's hole is complete once those 3 have scores.
+    const present = pl.map(p => !!p.pid), nPresent = present.filter(Boolean).length;
     const holes = s.par.map((par, h) => {
-      const gross = sc.map(row => row[h]);
+      const gross = sc.map((row, i) => present[i] ? row[h] : null);
       const strokes = pl.map(p => strokesOn(+p.hcp || 0, s.si[h]));
-      const complete = gross.every(v => v != null);
+      const complete = nPresent >= 2 && gross.every((v, i) => !present[i] || v != null);
       const net = gross.map((g, i) => g == null ? null : g - strokes[i]);
       const birdies = gross.reduce((a, g) => a + (g == null ? 0 : g <= par - 2 ? 2 : g === par - 1 ? 1 : 0), 0);
       const pick = (arr, n) => arr.map((v, i) => [v, i]).filter(x => x[0] != null).sort((a, b) => a[0] - b[0]).slice(0, n);
       let tg = null, tn = null, gIdx = [], nIdx = [];
       if (complete && f === 'gn') {
         let best = null;
-        gross.forEach((g, i) => net.forEach((n, j) => { if (i !== j && (!best || g + n < best[0] || (g + n === best[0] && g < best[1]))) best = [g + n, g, n, i, j]; }));
+        gross.forEach((g, i) => net.forEach((n, j) => { if (i !== j && g != null && n != null && (!best || g + n < best[0] || (g + n === best[0] && g < best[1]))) best = [g + n, g, n, i, j]; }));
         tg = best[1]; tn = best[2]; gIdx = [best[3]]; nIdx = [best[4]];
       } else if (complete) {
         if (f !== 'nn') { const p = pick(gross, f === 'gg' ? 2 : 1); tg = p.reduce((a, x) => a + x[0], 0); gIdx = p.map(x => x[1]); }
@@ -581,10 +693,10 @@ class Component extends DCLogic {
       rosterCount: q ? list.length + ' of ' + s.roster.length + ' players' : s.roster.length + ' players',
       noMatches: list.length === 0, noMatchText: s.roster.length ? 'No players match “' + (s.search || '') + '”.' : 'No players yet. Add your group to build teams faster.',
       playerRows: list.map(r => {
-        const editing = s.editingId === r.id, tm = teamOf[r.id];
+        // Players only belong to a team while an event is in progress.
+        const editing = s.editingId === r.id, tm = live ? teamOf[r.id] : null;
         return { name: r.name, index: fmtIdx(r.index), indexRaw: r.index, viewing: !editing, editing,
-          team: tm ? (live ? 'Playing today · Team ' + tm : 'Team ' + tm) : 'Not on a team',
-          teamFg: tm ? 'var(--color-accent-700)' : 'var(--color-text)', teamW: tm ? 700 : 400,
+          onTeam: !!tm, team: tm ? 'Playing today · Team ' + tm : '',
           edit: () => this.setState({ editingId: r.id, adding: false }), done: () => this.setState({ editingId: null }),
           setName: e => { const v = e.target.value; this.mutRoster(r.id, x => x.name = v); if (v.trim()) this.queue('pN' + r.id, () => this.sb.from('players').update({ name: v.trim() }).eq('id', r.id), 500); },
           setIndex: e => { const v = e.target.value; this.mutRoster(r.id, x => x.index = v === '' ? '' : +v); this.queue('pI' + r.id, () => this.sb.from('players').update({ hcp_index: v === '' ? null : +v }).eq('id', r.id), 500); },
@@ -621,16 +733,18 @@ class Component extends DCLogic {
     const live = s.inProgress !== false;
     const hasTeam = s.myTeam != null && s.myTeam < s.teams.length; const myTeam = hasTeam ? s.myTeam : 0;
     const calcs = s.teams.map((_, i) => this.teamCalc(i));
-    const final = calcs.every(c => c.thru === 18);
+    // Teams with at least one player; empty teams are left off the leaderboard and don't hold up "Final".
+    const active = s.teams.map(t => t.players.some(p => p.pid)), nActive = active.filter(Boolean).length;
+    const final = nActive > 0 && calcs.every((c, i) => !active[i] || c.thru === 18);
     const prizes = this.prizes();
     const nTeams = s.teams.length, pot = nTeams * 4 * (+s.buyIn || 0), per = pot / prizes.length;
     const go = screen => () => this.setState({ screen, menuOpen: false });
     const tName = i => 'Team ' + s.teams[i].name;
-    const finished = calcs.filter(c => c.thru === 18).length;
+    const finished = calcs.filter((c, i) => active[i] && c.thru === 18).length;
 
     const h = s.hole, mc = calcs[myTeam], mh = mc.holes[h];
     const titles = { players: 'Players', score: 'Scorecard', board: 'Leaderboard', pay: 'Payouts', setup: 'Event setup', detail: tName(s.detail) };
-    const status = !live && s.screen !== 'setup' && s.screen !== 'players' ? '' : { score: hasTeam ? 'Thru ' + mc.thru : '', board: final ? 'Final' : finished + ' of ' + nTeams + ' finished', pay: final ? 'Final' : 'Round in progress', setup: '', players: s.roster.length + ' saved', detail: '' }[s.screen];
+    const status = !live && s.screen !== 'setup' && s.screen !== 'players' ? '' : { score: hasTeam ? 'Thru ' + mc.thru : '', board: final ? 'Final' : finished + ' of ' + nActive + ' finished', pay: final ? 'Final' : 'Round in progress', setup: '', players: s.roster.length + ' saved', detail: '' }[s.screen];
 
     const holeStrip = s.par.map((_, i) => ({ n: i + 1, go: () => this.setState({ hole: i }),
       bg: i === h ? 'var(--color-accent)' : mc.holes[i].complete ? 'var(--color-text)' : 'transparent',
@@ -643,15 +757,25 @@ class Component extends DCLogic {
     };
     const entryRows = s.teams[myTeam].players.map((p, pi) => {
       const g = mh.gross[pi], st = mh.strokes[pi];
-      return { name: p.name, hcp: 'HCP ' + p.hcp + ' · ' + p.teeName, strokes: st ? '•'.repeat(st) + ' stroke' + (st > 1 ? 's' : '') : '',
-        net: g == null ? '' : 'Net ' + (g - st), score: g ?? '—',
-        color: g != null && g < mh.par ? 'var(--color-accent-700)' : 'var(--color-text)',
+      const n = g == null ? null : g - st;
+      // Golf marks: circle = birdie, double circle = eagle or better; square = bogey, double square = double bogey or worse.
+      const mark = v => { const d = v == null ? 0 : v - mh.par; const line = d ? '2px solid currentColor' : '2px solid transparent';
+        return { radius: d < 0 ? '50%' : '0', ring: line, ring2: d <= -2 || d >= 2 ? '2px solid currentColor' : 'none', color: d < 0 ? 'var(--color-accent-700)' : 'var(--color-text)' }; };
+      const gm = mark(g), nm = mark(n);
+      return { name: p.name, hcp: 'HCP ' + p.hcp + ' · ' + p.teeName, dots: '•'.repeat(st), strokesLabel: st ? st + ' handicap stroke' + (st > 1 ? 's' : '') : '',
+        netScore: n ?? '—', netLabel: n == null ? 'Net: no score yet' : 'Net ' + n + (mh.complete && !mh.nIdx.includes(pi) ? ', not counted' : ''),
+        // once the hole is complete, grey out nets that don't count
+        netOpacity: mh.complete && !mh.nIdx.includes(pi) ? '.3' : '1',
+        netColor: nm.color, netRadius: nm.radius, netRing: nm.ring, netRing2: nm.ring2,
+        score: g ?? '—', radius: gm.radius,
+        // once the hole is complete, grey out gross scores that don't count
+        grossOpacity: mh.complete && !mh.gIdx.includes(pi) ? '.3' : '1',
+        color: gm.color,
         tags: (mh.gIdx.includes(pi) ? [{ t: f === 'gg' ? 'Gross ball' : 'Best gross' }] : []).concat(mh.nIdx.includes(pi) ? [{ t: f === 'nn' ? 'Net ball' : 'Best net' }] : []),
-        cellBg: mh.gIdx.includes(pi) || mh.nIdx.includes(pi) ? 'var(--color-accent-100)' : 'transparent',
-        ring: g != null && g <= mh.par - 1 ? '2px solid currentColor' : '2px solid transparent',
-        ring2: g != null && g <= mh.par - 2 ? '2px solid currentColor' : 'none',
+        cellBg: mh.gIdx.includes(pi) ? 'var(--color-accent-100)' : 'transparent',
+        ring: gm.ring, ring2: gm.ring2,
         fill: () => { if (g == null) setScore(pi, v => v)(); }, dec: setScore(pi, v => Math.max(1, v - 1)), inc: setScore(pi, v => Math.min(15, v + 1)) };
-    });
+    }).filter((_, pi) => s.teams[myTeam].players[pi].pid); // no row for an empty player slot
     const dash = v => mh.complete ? v : '—';
     const holeSummary = [];
     if (f !== 'nn') holeSummary.push({ label: f === 'gg' ? 'Best 2 gross' : 'Best gross', val: dash(mh.tg) });
@@ -662,13 +786,15 @@ class Component extends DCLogic {
     const lead = {}; prizes.forEach(p => lead[p.key] = this.winners(calcs, p.key));
     const hdName = { fo: ['Front', '9'], bo: ['Back', '9'], to: ['18', 'Holes'] };
     const cell = (t, isLead) => ({ t, bg: isLead ? 'var(--color-accent-100)' : 'transparent', fg: isLead ? 'var(--color-accent-800)' : 'var(--color-text)', w: isLead ? 800 : 500 });
-    const boardRows = calcs.map((c, i) => ({ c, i })).sort((a, b) => (a.c.to.started ? a.c.to.rel : 999) - (b.c.to.started ? b.c.to.rel : 999) || b.c.thru - a.c.thru || a.i - b.i).map(({ c, i }) => ({
+    const boardRows = calcs.map((c, i) => ({ c, i })).filter(({ i }) => active[i]).sort((a, b) => (a.c.to.started ? a.c.to.rel : 999) - (b.c.to.started ? b.c.to.rel : 999) || b.c.thru - a.c.thru || a.i - b.i).map(({ c, i }) => ({
       name: s.teams[i].name, bg: hasTeam && i === myTeam ? 'var(--color-neutral-200)' : 'transparent', open: () => this.setState({ screen: 'detail', detail: i }),
       cells: [cell(c.thru === 18 ? 'F' : c.thru, false), cell(c.birdies, lead.bird.idx.includes(i))]
         .concat(nineKeys.map(k => cell(c[k].started ? toPar(c[k].rel) : '—', lead[k].idx.includes(i)))) }));
     const prizeLeaders = prizes.map(p => ({ label: p.label, winners: lead[p.key].idx.length ? lead[p.key].idx.map(i => s.teams[i].name).join(' / ') : '—', value: lead[p.key].value || 'No score yet' }));
 
-    const dc = calcs[s.detail], dpl = s.teams[s.detail].players;
+    const dc = calcs[s.detail], dAll = s.teams[s.detail].players;
+    // Team card: only slots with a player get a column. dIx maps columns back to slot numbers.
+    const dIx = dAll.map((p, i) => p.pid ? i : -1).filter(i => i >= 0), dpl = dIx.map(i => dAll[i]);
     const teamCols = f === 'gn' ? ['G', 'N'] : f === 'gg' ? ['G'] : ['N'];
     const head = { t: '', fg: 'var(--color-text)', w: 800, sub: '' };
     const C = (t, o = {}) => Object.assign({ t, fg: 'var(--color-text)', w: 500, sub: '' }, o);
@@ -678,12 +804,12 @@ class Component extends DCLogic {
       const hs = dc.holes.slice(from, to);
       const tot = k => hs.every(x => x[k] != null) ? hs.reduce((a, x) => a + x[k], 0) : '';
       return { bg: 'var(--color-surface)', rule: '2px solid var(--color-text)', cells: [C(label, { w: 800 }), C(hs.reduce((a, x) => a + x.par, 0), { w: 800 })]
-        .concat(dpl.map((_, pi) => C(hs.every(x => x.gross[pi] != null) ? hs.reduce((a, x) => a + x.gross[pi], 0) : '', { w: 800 })),
+        .concat(dIx.map(pi => C(hs.every(x => x.gross[pi] != null) ? hs.reduce((a, x) => a + x.gross[pi], 0) : '', { w: 800 })),
           teamCols.map(k => C(tot(k === 'G' ? 'tg' : 'tn'), { w: 800 }))) };
     };
     dc.holes.forEach((x, i) => {
       cardRows.push({ bg: 'transparent', rule: '1px solid var(--color-divider)', cells: [C(i + 1, { w: 700 }), C(x.par)].concat(
-        x.gross.map((g, pi) => C(g ?? '', { sub: '•'.repeat(x.strokes[pi]), w: x.gIdx.includes(pi) || x.nIdx.includes(pi) ? 800 : 400, fg: g != null && g < x.par ? 'var(--color-accent-700)' : 'var(--color-text)' })),
+        dIx.map(pi => [x.gross[pi], pi]).map(([g, pi]) => C(g ?? '', { sub: '•'.repeat(x.strokes[pi]), w: x.gIdx.includes(pi) || x.nIdx.includes(pi) ? 800 : 400, fg: g != null && g < x.par ? 'var(--color-accent-700)' : 'var(--color-text)' })),
         teamCols.map(k => C(k === 'G' ? (x.tg ?? '') : (x.tn ?? ''), { w: 800 }))) });
       if (i === 8) cardRows.push(sumRow('Out', 0, 9));
     });
@@ -699,8 +825,9 @@ class Component extends DCLogic {
     const payGroups = s.teams.map((t, i) => {
       const pw = won[i] / 4, pn = pw - (+s.buyIn || 0);
       return { team: tName(i), won: money(won[i]), net: (pn * 4 > 0 ? '+' : '') + money(pn * 4), netFg: nf(pn),
-        players: t.players.map(p => ({ name: p.name, won: money(pw), net: (pn > 0 ? '+' : '') + money(pn), netFg: nf(pn) })) };
-    }).sort((a, b) => parseFloat(b.won.replace(/[^0-9.]/g, '')) - parseFloat(a.won.replace(/[^0-9.]/g, '')));
+        players: t.players.filter(p => p.pid).map(p => ({ name: p.name, won: money(pw), net: (pn > 0 ? '+' : '') + money(pn), netFg: nf(pn) })) };
+    }).filter((_, i) => active[i]) // only teams with players
+      .sort((a, b) => parseFloat(b.won.replace(/[^0-9.]/g, '')) - parseFloat(a.won.replace(/[^0-9.]/g, '')));
 
     const courseCells = [];
     [0, 9].forEach(from => {
@@ -717,7 +844,9 @@ class Component extends DCLogic {
       idle: !s.confirmNew && !s.confirmEnd, confirmingEnd: !!s.confirmEnd,
       askEnd: () => this.setState({ confirmEnd: true, confirmNew: false }), endEvent: () => { const id = s.eventId; this.setState({ inProgress: false, confirmEnd: false, myTeam: null }); if (id) this.queue('end', () => this.sb.from('events').update({ in_progress: false, ended_at: new Date().toISOString() }).eq('id', id)); },
       pickTeams: s.teams.map((t, i) => ({ name: tName(i), players: t.players.map(p => p.name).filter(Boolean).join(', ') || 'No players yet', meta: calcs[i].thru === 18 ? 'Finished' : calcs[i].thru ? 'Thru ' + calcs[i].thru : '',
-        bg: 'transparent', pick: () => { const first = calcs[i].holes.findIndex(x => !x.complete); saveUI({ teamId: t.id, eventId: s.eventId }); this.setState({ myTeam: i, hole: first < 0 ? 17 : first }); } })),
+        bg: 'transparent', pick: () => { const first = calcs[i].holes.findIndex(x => !x.complete); saveUI({ teamId: t.id, eventId: s.eventId }); this.setState({ myTeam: i, hole: first < 0 ? 17 : first }); } }))
+        .filter((_, i) => s.teams[i].players.some(p => p.pid)), // only teams with players assigned
+      noPickTeams: !s.teams.some(t => t.players.some(p => p.pid)),
       changeTeam: () => { saveUI({ teamId: null }); this.setState({ myTeam: null }); }, isBoard: live && s.screen === 'board', isDetail: live && s.screen === 'detail', isPay: live && s.screen === 'pay', isSetup: s.screen === 'setup',
       holeStrip, holeTotal: mh.complete ? (mh.tt - mh.par * 2 === 0 ? 'Even' : toPar(mh.tt - mh.par * 2)) : '—',
       holeTotalFg: mh.complete && mh.tt < mh.par * 2 ? 'var(--color-accent-700)' : 'var(--color-text)',
@@ -728,9 +857,10 @@ class Component extends DCLogic {
       boardHead: [{ a: 'Team', b: '' }, { a: 'Thru', b: '' }, { a: 'Bird', b: 'ies' }].concat(nineKeys.map(k => ({ a: hdName[k][0], b: hdName[k][1] }))),
       backToBoard: go('board'), detailThru: dc.thru === 18 ? 'Finished' : 'Thru ' + dc.thru,
       detailPlayers: dpl.map(p => ({ ini: ini(p.name), name: p.name, hcp: p.hcp })),
-      cardRows, cardCols: '44px 36px repeat(4,minmax(0,1fr)) repeat(' + teamCols.length + ',minmax(0,1fr))',
+      cardRows, detailPlayerCols: 'repeat(' + Math.max(1, dpl.length) + ',1fr)',
+      cardCols: '44px 36px repeat(' + Math.max(1, dpl.length) + ',minmax(0,1fr)) repeat(' + teamCols.length + ',minmax(0,1fr))',
       potCells: [{ label: 'Pot', val: money(pot) }, { label: 'Per prize', val: money(per) }, { label: 'Buy-in', val: money(+s.buyIn || 0) }],
-      buyInLabel: money(+s.buyIn || 0), notFinal: !final, isFinal: final, finishedLine: finished + ' of ' + nTeams + ' teams have finished 18 holes.', prizeRows, payGroups,
+      buyInLabel: money(+s.buyIn || 0), notFinal: !final, isFinal: final, finishedLine: finished + ' of ' + nActive + ' teams have finished 18 holes.', prizeRows, payGroups,
       buyIn: s.buyIn, myTeamName: hasTeam ? tName(myTeam) : 'Not chosen yet',
       setCourse: e => { const v = e.target.value, id = s.crs.id; this.mutCourse(c => c.name = v); if (id) this.queue('cn' + id, () => this.sb.from('courses').update({ name: v }).eq('id', id), 500); },
       courseList: s.courses.map(c => { const on = c.id === s.courseId; return { name: c.name, home: !!c.home, meta: 'Par ' + c.par.reduce((a, b) => a + b, 0), pick: () => this.pickCourse(c.id), bg: on ? 'var(--color-surface)' : 'transparent', dot: on ? 'var(--color-text)' : 'transparent', w: on ? 800 : 500 }; }),
@@ -749,7 +879,8 @@ class Component extends DCLogic {
       formatHelp: { gn: 'Each hole counts the team\u2019s best gross ball and best net ball. Prizes: birdies, front 9, back 9, 18 holes.', gg: 'Each hole counts the team\u2019s two best gross balls. Prizes: birdies, front 9, back 9, 18 holes.', nn: 'Each hole counts the team\u2019s two best net balls. Prizes: birdies, front 9, back 9, 18 holes.' }[f],
       ...this.playersVals(s),
       goPlayers: go('players'),
-      setupTeams: s.teams.map((t, ti) => ({ name: t.name, setName: e => { const v = e.target.value; this.mut(n => n.teams[ti].name = v); if (t.id) this.queue('tn' + t.id, () => this.sb.from('event_teams').update({ name: v }).eq('id', t.id), 500); },
+      addTeam: () => this.addTeam(),
+      setupTeams: s.teams.map((t, ti) => ({ ti, t })).filter(({ ti }) => this.shownTeams().includes(ti)).map(({ t, ti }) => ({ name: t.name, setName: e => { const v = e.target.value; this.mut(n => n.teams[ti].name = v); if (t.id) this.queue('tn' + t.id, () => this.sb.from('event_teams').update({ name: v }).eq('id', t.id), 500); },
         players: t.players.map((p, pi) => ({ name: p.name, hcp: p.pid ? p.hcp : '', index: p.pid ? p.index : '', tee: String(p.tee), pid: p.pid || '',
           opts: [{ v: '', label: 'Choose player', dis: false }].concat(s.roster.slice().sort(byName).map(r => { const used = s.teams.some((t2, a) => t2.players.some((p2, b) => p2.pid === r.id && !(a === ti && b === pi))); return { v: r.id, label: r.name + (used ? ' (on a team)' : ''), dis: used }; })),
           setPid: e => { const v = e.target.value; this.mut(n => n.teams[ti].players[pi].pid = v || null); if (p.epId) this.queue('pp' + p.epId, () => this.sb.from('event_players').update({ player_id: v || null }).eq('id', p.epId)); },
@@ -766,13 +897,17 @@ class Component extends DCLogic {
       askNew: () => this.setState({ confirmNew: true, confirmEnd: false }), cancelNew: () => this.setState({ confirmNew: false, confirmEnd: false }),
       newKeep: () => this.startNew(),
       courseCells,
+      updateReady: !!s.updateReady, applyUpdate: () => location.reload(),
       menuOpen: !!s.menuOpen, toggleMenu: () => this.setState(st => ({ menuOpen: !st.menuOpen })),
-      menuBtnBg: s.menuOpen ? 'var(--color-text)' : 'transparent', menuBtnFg: s.menuOpen ? 'var(--color-bg)' : 'var(--color-text)',
-      menuIconPath: s.menuOpen ? 'M6 6l12 12M18 6L6 18' : 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+      closeMenu: () => this.setState({ menuOpen: false }),
       menuItems: [['setup', 'Event setup', (live ? 'Event in progress' : 'No event in progress') + ' · ' + s.course], ['players', 'Players', s.roster.length + ' saved players']].map(([k, label, meta]) => ({ label, meta, go: go(k), bar: s.screen === k ? 'var(--color-accent)' : 'transparent' })),
-      navItems: [['score', 'Score'], ['board', 'Board'], ['pay', 'Payouts']].map(([k, label]) => {
+      navItems: [
+        ['score', 'Score', 'M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3zM15 5l4 4'],
+        ['board', 'Leaderboard', 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z'],
+        ['pay', 'Payouts', 'M2 6h20v12H2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 12h.01M18 12h.01']
+      ].map(([k, label, icon]) => {
         const on = s.screen === k || (k === 'board' && s.screen === 'detail');
-        return { label, go: go(k), bar: on ? 'var(--color-accent)' : 'transparent', w: on ? 800 : 500 };
+        return { label, icon, go: go(k), bar: on ? 'var(--color-accent)' : 'transparent', w: on ? 800 : 500, ic: on ? 'var(--color-accent-700)' : 'var(--color-text)', sw: on ? 2.5 : 2, current: on ? 'page' : 'false' };
       }),
     };
   }

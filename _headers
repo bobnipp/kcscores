@@ -8,6 +8,13 @@
 /support.js
   Cache-Control: no-cache
 
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: no-cache
+
 /_ds/*
   Cache-Control: public, max-age=86400
 

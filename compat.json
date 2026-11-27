@@ -1,0 +1,35 @@
+{
+  "v": 1,
+  "mode": "omelette",
+  "root": "project/",
+  "title": "Golf Scoring App Design",
+  "entry": "Fourball.dc.html",
+  "pages": [
+    {
+      "path": "Fourball.dc.html",
+      "title": "Fourball",
+      "kind": "page"
+    }
+  ],
+  "migratorVersion": "artifact-migrator (claude-design-backend 1a1b12dd776d)",
+  "createdAt": "2026-11-27T19:42:00.544Z",
+  "source": {
+    "v": 1,
+    "app": "claude-design",
+    "url": "https://claude.ai/design/p/253d2c8f-2759-45eb-a8d8-1f65e2a4182f",
+    "projectId": "253d2c8f-2759-45eb-a8d8-1f65e2a4182f",
+    "exportedAt": "2026-11-27T19:42:00.544Z"
+  },
+  "report": {
+    "itemsVersion": 2,
+    "pages": {
+      "total": 1,
+      "ok": 1,
+      "partial": 0,
+      "notMigrated": 0
+    },
+    "items": [],
+    "truncated": 0,
+    "truncatedLeftOut": 0
+  }
+}

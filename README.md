@@ -30,6 +30,17 @@ The site root serves the app (see `_redirects`).
 
 `_redirects` maps `/` to the app. `_headers` turns off caching for the app files so phones pick up new versions straight away.
 
+## Install on a phone (PWA)
+
+`manifest.webmanifest` and `icons/` make the app installable; `sw.js` caches it so it opens fast and still loads with no signal (scores need a connection to sync).
+
+- **Android Chrome:** menu → Install app.
+- **iPhone Safari:** Share → Add to Home Screen.
+
+The service worker fetches the app's own files from the network first, so a new deploy reaches phones on the next open — no version bump needed. Only bump `VERSION` in `sw.js` if you add or rename files in its `FILES` list. Supabase traffic is never cached.
+
+While the app is open it checks for a new deploy when it comes back to the foreground and every 5 minutes. When one is found, an **Update ready · Tap to reload** bar appears under the header; it never reloads on its own, so nobody loses their place mid-hole.
+
 ## Supabase
 
 The project URL and anon key are set at the top of the script in `Fourball.dc.html` (`SB_URL`, `SB_KEY`). The anon key is public by design; access is controlled by the row-level security policies in `setup.sql`, which currently allow anyone with the link to read and write.
