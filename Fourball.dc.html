@@ -58,7 +58,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
             </button>
           </div>
-      <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="2">
+      <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="3">
         <button onClick="{{ m.go }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:64px;border:0;border-bottom:1px solid var(--color-divider);background:transparent;color:var(--color-text);text-align:left;padding:0 var(--space-4) 0 0;cursor:pointer" style-hover="background:var(--color-accent-100)">
           <span style="align-self:stretch;background:{{ m.bar }}"></span>
           <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:18px;font-weight:800">{{ m.label }}</span><span style="font-size:13px">{{ m.meta }}</span></span>
@@ -315,7 +315,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
         </sc-if>
       </div>
       <div style="display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4);border-bottom:2px solid var(--color-text)">
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600">Course
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600">Course for this event
           <div style="display:flex;flex-direction:column;border:2px solid var(--color-text)">
             <sc-for list="{{ courseList }}" as="c" hint-placeholder-count="3">
               <button onClick="{{ c.pick }}" style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:48px;border:0;border-bottom:1px solid var(--color-divider);background:{{ c.bg }};color:var(--color-text);text-align:left;padding:0 var(--space-3);cursor:pointer;font-size:15px;font-weight:{{ c.w }}">
@@ -325,7 +325,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
               </button>
             </sc-for>
           </div>
-          <div style="display:flex;gap:var(--space-2)"><button class="btn btn-ghost" onClick="{{ addCourse }}" style="white-space:nowrap">+ Add course</button></div>
+          <div style="display:flex;gap:var(--space-2)"><button class="btn btn-ghost" onClick="{{ goCourses }}" style="white-space:nowrap">Manage courses →</button></div>
         </div>
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600;max-width:50%">Buy-in per player ($)<input class="input" type="number" value="{{ buyIn }}" onChange="{{ setBuyIn }}"></label>
         <div style="display:flex;flex-direction:column;gap:var(--space-1);font-size:13px;font-weight:600">Team format
@@ -361,9 +361,25 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
         </div>
       </sc-for>
 
-      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-3);border-top:2px solid var(--color-text)">
-        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Edit course · par and hole handicap (stroke index)</div>
-        <input class="input" value="{{ course }}" onChange="{{ setCourse }}" style="font-weight:800;font-size:17px">
+      <div style="height:var(--space-8)"></div>
+    </sc-if>
+
+    <sc-if value="{{ isCourses }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4);border-bottom:2px solid var(--color-text)">
+        <div style="display:flex;flex-direction:column;border:2px solid var(--color-text)">
+          <sc-for list="{{ editCourseList }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);min-height:56px;border:0;border-bottom:1px solid var(--color-divider);background:{{ c.bg }};color:var(--color-text);text-align:left;padding:0 var(--space-3) 0 0;font-size:16px;font-weight:{{ c.w }};cursor:pointer">
+              <span style="align-self:stretch;background:{{ c.bar }}"></span>
+              <span>{{ c.name }}<span style="display:block;font-size:12px;font-weight:400">{{ c.meta }}</span></span>
+              <span style="display:flex;gap:var(--space-1)"><sc-if value="{{ c.home }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">Home</span></sc-if><sc-if value="{{ c.inUse }}" hint-placeholder-val="{{ false }}"><span class="tag">This event</span></sc-if></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex"><button class="btn btn-ghost" onClick="{{ addCourse }}" style="white-space:nowrap">+ Add course</button></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-3)">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Edit {{ editCourseName }} · par and hole handicap (stroke index)</div>
+        <input class="input" value="{{ editCourseName }}" onChange="{{ setCourse }}" style="font-weight:800;font-size:17px">
         <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap">
           <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}"><span class="tag tag-accent">Home course</span></sc-if>
           <sc-if value="{{ notHome }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ setHome }}">Set as home course</button></sc-if>
@@ -600,12 +616,14 @@ class Component extends DCLogic {
     }
     this.setState({ courseId: id });
   }
+  // Course being edited on the Courses page (separate from the event's course).
+  editId(st = this.state) { return st.courses.some(c => c.id === st.editCourseId) ? st.editCourseId : st.courseId; }
   pushCourse() {
-    const id = this.state.courseId; if (!id) return;
+    const id = this.editId(); if (!id) return;
     this.queue('ca' + id, () => { const c = this.state.courses.find(x => x.id === id); return c && this.sb.from('courses').update({ par: c.par, stroke_index: c.si }).eq('id', id); }, 600);
   }
   mutRoster(id, fn) { this.mut(n => { const r = n.roster.find(x => x.id === id); if (r) fn(r, n); }); }
-  mutCourse(fn) { this.mut(n => { const c = n.courses.find(x => x.id === n.courseId) || n.courses[0]; if (c) fn(c, n); }); }
+  mutCourse(fn) { const id = this.editId(); this.mut(n => { const c = n.courses.find(x => x.id === id) || n.courses[0]; if (c) fn(c, n); }); }
   mut(fn) { this.setState(s => { const n = JSON.parse(JSON.stringify(s)); fn(n); return n; }); }
 
   scoresFor(ti) {
@@ -693,7 +711,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const v = this.vals(), st = this.state;
-    if (st.loading) Object.assign(v, { isScore: false, isPick: false, isBoard: false, isDetail: false, isPay: false, isSetup: false, isPlayers: false, noEvent: false });
+    if (st.loading) Object.assign(v, { isScore: false, isPick: false, isBoard: false, isDetail: false, isPay: false, isSetup: false, isPlayers: false, isCourses: false, noEvent: false });
     v.isLoading = !!st.loading; v.hasSyncError = !!st.syncError; v.syncError = st.syncError || '';
     v.retrySync = () => { this.setState({ syncError: '' }); this.refetch(); };
     return v;
@@ -714,8 +732,8 @@ class Component extends DCLogic {
     const finished = calcs.filter((c, i) => active[i] && c.thru === 18).length;
 
     const h = s.hole, mc = calcs[myTeam], mh = mc.holes[h];
-    const titles = { players: 'Players', score: 'Scorecard', board: 'Leaderboard', pay: 'Payouts', setup: 'Event setup', detail: tName(s.detail) };
-    const status = !live && s.screen !== 'setup' && s.screen !== 'players' ? '' : { score: hasTeam ? 'Thru ' + mc.thru : '', board: final ? 'Final' : finished + ' of ' + nActive + ' finished', pay: final ? 'Final' : 'Round in progress', setup: '', players: s.roster.length + ' saved', detail: '' }[s.screen];
+    const titles = { players: 'Players', courses: 'Courses', score: 'Scorecard', board: 'Leaderboard', pay: 'Payouts', setup: 'Event setup', detail: tName(s.detail) };
+    const status = !live && s.screen !== 'setup' && s.screen !== 'players' && s.screen !== 'courses' ? '' : { score: hasTeam ? 'Thru ' + mc.thru : '', board: final ? 'Final' : finished + ' of ' + nActive + ' finished', pay: final ? 'Final' : 'Round in progress', setup: '', players: s.roster.length + ' saved', courses: s.courses.length + (s.courses.length === 1 ? ' course' : ' courses'), detail: '' }[s.screen];
 
     const holeStrip = s.par.map((_, i) => ({ n: i + 1, go: () => this.setState({ hole: i }),
       bg: i === h ? 'var(--color-accent)' : mc.holes[i].complete ? 'var(--color-text)' : 'transparent',
@@ -800,17 +818,19 @@ class Component extends DCLogic {
     }).filter((_, i) => active[i]) // only teams with players
       .sort((a, b) => parseFloat(b.won.replace(/[^0-9.]/g, '')) - parseFloat(a.won.replace(/[^0-9.]/g, '')));
 
+    const edc = s.courses.find(c => c.id === this.editId()) || s.crs;
+    const ed = Object.assign({}, edc, { tees: edc.tees && edc.tees.length ? edc.tees : s.crs.tees });
     const courseCells = [];
     [0, 9].forEach(from => {
       courseCells.push({ label: true, edit: false, v: 'Hole', w: 800 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: true, edit: false, v: i + 1, w: 800 });
-      courseCells.push({ label: true, edit: false, v: 'Par', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: s.par[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.par[i] = v); this.pushCourse(); } });
-      courseCells.push({ label: true, edit: false, v: 'SI', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: s.si[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.si[i] = v); this.pushCourse(); } });
+      courseCells.push({ label: true, edit: false, v: 'Par', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: ed.par[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.par[i] = v); this.pushCourse(); } });
+      courseCells.push({ label: true, edit: false, v: 'SI', w: 700 }); for (let i = from; i < from + 9; i++) courseCells.push({ label: false, edit: true, v: ed.si[i], w: 600, set: e => { const v = +e.target.value; this.mutCourse(c => c.si[i] = v); this.pushCourse(); } });
     });
 
     return {
       course: s.course, formatLabel: FORMATS[f], title: titles[s.screen], statusLine: status,
       isScore: live && s.screen === 'score' && hasTeam, isPick: live && s.screen === 'score' && !hasTeam,
-      noEvent: !live && s.screen !== 'setup' && s.screen !== 'players', goSetup: go('setup'), inProgress: live, notInProgress: !live,
+      noEvent: !live && s.screen !== 'setup' && s.screen !== 'players' && s.screen !== 'courses', goSetup: go('setup'), inProgress: live, notInProgress: !live,
       eventTag: live ? 'Event in progress' : 'No event in progress', eventTagClass: live ? 'tag-accent' : 'tag-neutral',
       idle: !s.confirmNew && !s.confirmEnd, confirmingEnd: !!s.confirmEnd,
       askEnd: () => this.setState({ confirmEnd: true, confirmNew: false }), endEvent: () => { const id = s.eventId; this.setState({ inProgress: false, confirmEnd: false, myTeam: null }); if (id) this.queue('end', () => this.sb.from('events').update({ in_progress: false, ended_at: new Date().toISOString() }).eq('id', id)); },
@@ -833,18 +853,20 @@ class Component extends DCLogic {
       potCells: [{ label: 'Pot', val: money(pot) }, { label: 'Per prize', val: money(per) }, { label: 'Buy-in', val: money(+s.buyIn || 0) }],
       buyInLabel: money(+s.buyIn || 0), notFinal: !final, isFinal: final, finishedLine: finished + ' of ' + nActive + ' teams have finished 18 holes.', prizeRows, payGroups,
       buyIn: s.buyIn, myTeamName: hasTeam ? tName(myTeam) : 'Not chosen yet',
-      setCourse: e => { const v = e.target.value, id = s.crs.id; this.mutCourse(c => c.name = v); if (id) this.queue('cn' + id, () => this.sb.from('courses').update({ name: v }).eq('id', id), 500); },
+      editCourseName: ed.name,
+      setCourse: e => { const v = e.target.value, id = ed.id; this.mutCourse(c => c.name = v); if (id) this.queue('cn' + id, () => this.sb.from('courses').update({ name: v }).eq('id', id), 500); },
       courseList: s.courses.map(c => { const on = c.id === s.courseId; return { name: c.name, home: !!c.home, meta: 'Par ' + c.par.reduce((a, b) => a + b, 0), pick: () => this.pickCourse(c.id), bg: on ? 'var(--color-surface)' : 'transparent', dot: on ? 'var(--color-text)' : 'transparent', w: on ? 800 : 500 }; }),
+      editCourseList: s.courses.map(c => { const on = c.id === ed.id; return { name: c.name, home: !!c.home, inUse: live && c.id === s.courseId, on: on ? 'true' : 'false', meta: 'Par ' + c.par.reduce((a, b) => a + b, 0) + ' · ' + c.tees.length + ' tees', pick: () => this.setState({ editCourseId: c.id }), bg: on ? 'var(--color-surface)' : 'transparent', bar: on ? 'var(--color-accent)' : 'transparent', w: on ? 800 : 500 }; }),
+      isCourses: s.screen === 'courses', goCourses: go('courses'),
       addCourse: () => {
         const id = uuid(), par = Array(18).fill(4), si = SI_DEFAULT.slice(), tees = DEFAULT_TEES();
-        if (live) { this.fail('Courses can be added when no event is in progress.'); return; }
-        this.mut(n => { n.courses.push({ id, name: 'New course', home: false, par, si, tees }); n.courseId = id; });
+        this.mut(n => { n.courses.push({ id, name: 'New course', home: false, par, si, tees }); n.editCourseId = id; });
         this.queue('ac' + id, async () => { const r = await this.sb.from('courses').insert({ id, name: 'New course', is_home: false, par, stroke_index: si }); if (r.error) return r; return this.sb.from('tees').insert(tees.map((t, i) => ({ id: t.id, course_id: id, name: t.name, rating: t.rating, slope: t.slope, sort: i }))); });
       },
-      isHome: !!s.crs.home, notHome: !s.crs.home, canDelete: !s.crs.home && s.courses.length > 1,
-      setHome: () => { const id = s.crs.id; this.mut(n => n.courses.forEach(c => c.home = c.id === id)); if (id) this.queue('home', async () => { const r = await this.sb.from('courses').update({ is_home: false }).eq('is_home', true).neq('id', id); if (r.error) return r; return this.sb.from('courses').update({ is_home: true }).eq('id', id); }); },
-      deleteCourse: () => { const id = s.crs.id; this.mut(n => { n.courses = n.courses.filter(c => c.id !== id); n.courseId = (n.courses.find(c => c.home) || n.courses[0]).id; }); if (id) { this.needRefetch = true; this.queue('dc' + id, () => this.sb.from('courses').delete().eq('id', id)); } },
-      siWarning: (() => { const set = new Set(s.si); return set.size === 18 && s.si.every(v => v >= 1 && v <= 18) ? '' : 'Stroke index should use each number 1–18 once.'; })(),
+      isHome: !!ed.home, notHome: !ed.home, canDelete: !ed.home && s.courses.length > 1 && !(live && ed.id === s.courseId),
+      setHome: () => { const id = ed.id; this.mut(n => n.courses.forEach(c => c.home = c.id === id)); if (id) this.queue('home', async () => { const r = await this.sb.from('courses').update({ is_home: false }).eq('is_home', true).neq('id', id); if (r.error) return r; return this.sb.from('courses').update({ is_home: true }).eq('id', id); }); },
+      deleteCourse: () => { const id = ed.id; this.mut(n => { n.courses = n.courses.filter(c => c.id !== id); if (n.courseId === id) n.courseId = (n.courses.find(c => c.home) || n.courses[0]).id; n.editCourseId = null; }); if (id) { this.needRefetch = true; this.queue('dc' + id, () => this.sb.from('courses').delete().eq('id', id)); } },
+      siWarning: (() => { const set = new Set(ed.si); return set.size === 18 && ed.si.every(v => v >= 1 && v <= 18) ? '' : 'Stroke index should use each number 1–18 once.'; })(),
       setBuyIn: e => { const v = e.target.value; this.setState({ buyIn: v }); if (live && s.eventId) this.queue('bi', () => this.sb.from('events').update({ buy_in: +v || 0 }).eq('id', s.eventId), 500); },
       formatOpts: Object.keys(FORMATS).map(k => ({ label: FORMATS[k], pick: () => { this.setState({ format: k }); if (live && s.eventId) this.queue('fmt', () => this.sb.from('events').update({ format: k }).eq('id', s.eventId)); }, bg: k === f ? 'var(--color-text)' : 'transparent', fg: k === f ? 'var(--color-bg)' : 'var(--color-text)' })),
       formatHelp: { gn: 'Each hole counts the team\u2019s best gross ball and best net ball. Prizes: birdies, front 9, back 9, 18 holes.', gg: 'Each hole counts the team\u2019s two best gross balls. Prizes: birdies, front 9, back 9, 18 holes.', nn: 'Each hole counts the team\u2019s two best net balls. Prizes: birdies, front 9, back 9, 18 holes.' }[f],
@@ -857,12 +879,12 @@ class Component extends DCLogic {
           setTee: e => { const v = +e.target.value, tee = s.crs.tees[v]; this.mut(n => n.teams[ti].players[pi].tee = v); if (p.epId && tee && tee.id) this.queue('pt' + p.epId, () => this.sb.from('event_players').update({ tee_id: tee.id }).eq('id', p.epId)); },
           })) })),
       teeOpts: s.crs.tees.map((t, i) => ({ v: String(i), label: t.name })),
-      teeRows: s.crs.tees.map((t, i) => ({ name: t.name, rating: t.rating, slope: t.slope,
+      teeRows: ed.tees.map((t, i) => ({ name: t.name, rating: t.rating, slope: t.slope,
         setName: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].name = v); if (t.id) this.queue('tN' + t.id, () => this.sb.from('tees').update({ name: v }).eq('id', t.id), 500); },
         setRating: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].rating = v === '' ? '' : +v); if (t.id && v !== '') this.queue('tR' + t.id, () => this.sb.from('tees').update({ rating: +v }).eq('id', t.id), 500); },
         setSlope: e => { const v = e.target.value; this.mutCourse(c => c.tees[i].slope = v === '' ? '' : +v); if (t.id && v !== '') this.queue('tS' + t.id, () => this.sb.from('tees').update({ slope: +v }).eq('id', t.id), 500); },
-        remove: () => { if (s.crs.tees.length < 2) return; this.mutCourse(c => c.tees.splice(i, 1)); if (t.id) this.queue('tD' + t.id, () => this.sb.from('tees').delete().eq('id', t.id)); } })),
-      addTee: () => { const id = uuid(), cid = s.crs.id, rating = s.par.reduce((a, b) => a + b, 0), sort = s.crs.tees.length; if (!cid) return; this.mutCourse(c => c.tees.push({ id, name: 'New tees', rating, slope: 113 })); this.queue('tA' + id, () => this.sb.from('tees').insert({ id, course_id: cid, name: 'New tees', rating, slope: 113, sort })); },
+        remove: () => { if (ed.tees.length < 2) return; this.mutCourse(c => c.tees.splice(i, 1)); if (t.id) this.queue('tD' + t.id, () => this.sb.from('tees').delete().eq('id', t.id)); } })),
+      addTee: () => { const id = uuid(), cid = ed.id, rating = ed.par.reduce((a, b) => a + b, 0), sort = ed.tees.length; if (!cid) return; this.mutCourse(c => c.tees.push({ id, name: 'New tees', rating, slope: 113 })); this.queue('tA' + id, () => this.sb.from('tees').insert({ id, course_id: cid, name: 'New tees', rating, slope: 113, sort })); },
       confirming: !!s.confirmNew, notConfirming: !s.confirmNew, newBg: s.confirmNew || s.confirmEnd ? 'var(--color-accent-100)' : 'transparent',
       askNew: () => this.setState({ confirmNew: true, confirmEnd: false }), cancelNew: () => this.setState({ confirmNew: false, confirmEnd: false }),
       newKeep: () => this.startNew(),
@@ -870,7 +892,7 @@ class Component extends DCLogic {
       updateReady: !!s.updateReady, applyUpdate: () => location.reload(),
       menuOpen: !!s.menuOpen, toggleMenu: () => this.setState(st => ({ menuOpen: !st.menuOpen })),
       closeMenu: () => this.setState({ menuOpen: false }),
-      menuItems: [['setup', 'Event setup', (live ? 'Event in progress' : 'No event in progress') + ' · ' + s.course], ['players', 'Players', s.roster.length + ' saved players']].map(([k, label, meta]) => ({ label, meta, go: go(k), bar: s.screen === k ? 'var(--color-accent)' : 'transparent' })),
+      menuItems: [['setup', 'Event setup', (live ? 'Event in progress' : 'No event in progress') + ' · ' + s.course], ['players', 'Players', s.roster.length + ' saved players'], ['courses', 'Courses', s.courses.length + (s.courses.length === 1 ? ' saved course' : ' saved courses')]].map(([k, label, meta]) => ({ label, meta, go: go(k), bar: s.screen === k ? 'var(--color-accent)' : 'transparent' })),
       navItems: [
         ['score', 'Score', 'M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3zM15 5l4 4'],
         ['board', 'Leaderboard', 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z'],
