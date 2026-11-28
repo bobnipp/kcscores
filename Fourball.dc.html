@@ -309,7 +309,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
         </sc-if>
         <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
           <div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">Start a new event?</div>
-          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with four empty teams. Add players to them below. Past events stay saved.</div>
+          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with the teams and players below. Past events stay saved.</div>
           <button class="btn btn-primary btn-block" onClick="{{ newKeep }}" style="height:52px">Start new event</button>
           <button class="btn btn-ghost" onClick="{{ cancelNew }}">Cancel</button>
         </sc-if>
@@ -534,7 +534,8 @@ class Component extends DCLogic {
       const ev = e.data[0];
       const home = courses.find(x => x.home) || courses[0];
       let teams = null, scores = null;
-      if (ev) {
+      // Teams/players belong to the event in progress. With no event running, setup works on a local draft.
+      if (ev && ev.in_progress) {
         const [tm, ep, sc] = await Promise.all([
           sb.from('event_teams').select('*').eq('event_id', ev.id).order('position'),
           sb.from('event_players').select('*').eq('event_id', ev.id),
@@ -561,7 +562,9 @@ class Component extends DCLogic {
         return { loading: false, courses, roster, eventId: ev ? ev.id : null, inProgress: live,
           courseId: live ? ev.course_id : (st.courseId && courses.some(x => x.id === st.courseId) ? st.courseId : home ? home.id : null),
           buyIn: ev && (live || st.loading) ? +ev.buy_in : st.buyIn, format: ev && (live || st.loading) ? ev.format : st.format,
-          teams, scores, myTeam: mt >= 0 ? mt : null, hole };
+          // No event running: keep the draft teams being set up (local, no ids) instead of overwriting them.
+          ...(live || st.loading || !st.teams || st.teams.some(t => t.id) ? { teams, scores } : {}),
+          myTeam: mt >= 0 ? mt : null, hole };
       });
     } catch (err) { this.setState({ loading: false }); this.fail(err); }
   }
@@ -583,11 +586,11 @@ class Component extends DCLogic {
     const s = this.state, home = s.courses.find(c => c.home) || s.courses[0];
     if (!home) { this.fail('Add a course before starting an event.'); return; }
     const evId = uuid(), tees = home.tees;
-    // A new event starts clean: four teams (1-4), no players. Tees default to the second tee (or the only one).
-    const src = [1, 2, 3, 4].map(k => ({ name: String(k), players: [0, 1, 2, 3].map(() => ({ pid: null, tee: Math.min(1, Math.max(0, tees.length - 1)) })) }));
+    // The new event uses the teams and players chosen in Event setup (cleared when the last event ended).
+    const src = s.teams;
     const teamRows = src.map((t, i) => ({ id: uuid(), event_id: evId, position: i, name: t.name || String(i + 1) }));
     const epRows = [];
-    src.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
+    src.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: p.pid || null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
     this.needRefetch = true;
     this.queue('start', async () => {
       let r = await this.sb.from('events').insert({ id: evId, course_id: home.id, buy_in: +s.buyIn || 0, format: s.format, in_progress: true }); if (r.error) return r;
@@ -596,9 +599,8 @@ class Component extends DCLogic {
     });
     saveUI({ teamId: null, eventId: evId });
     let k = 0;
-    const teams = src.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: null, tee: p.tee })) }));
-    // Stay on Event setup so players can be added to the new teams.
-    this.setState({ eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'setup' });
+    const teams = src.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: p.pid, tee: p.tee })) }));
+    this.setState({ eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'score' });
   }
 
   pickCourse(id) {
@@ -833,7 +835,7 @@ class Component extends DCLogic {
       noEvent: !live && s.screen !== 'setup' && s.screen !== 'players' && s.screen !== 'courses', goSetup: go('setup'), inProgress: live, notInProgress: !live,
       eventTag: live ? 'Event in progress' : 'No event in progress', eventTagClass: live ? 'tag-accent' : 'tag-neutral',
       idle: !s.confirmNew && !s.confirmEnd, confirmingEnd: !!s.confirmEnd,
-      askEnd: () => this.setState({ confirmEnd: true, confirmNew: false }), endEvent: () => { const id = s.eventId; this.setState({ inProgress: false, confirmEnd: false, myTeam: null }); if (id) this.queue('end', () => this.sb.from('events').update({ in_progress: false, ended_at: new Date().toISOString() }).eq('id', id)); },
+      askEnd: () => this.setState({ confirmEnd: true, confirmNew: false }), endEvent: () => { const id = s.eventId, fresh = defaultTeams(); this.setState({ inProgress: false, confirmEnd: false, myTeam: null, teams: fresh, scores: emptyScores(fresh) }); if (id) this.queue('end', () => this.sb.from('events').update({ in_progress: false, ended_at: new Date().toISOString() }).eq('id', id)); },
       pickTeams: s.teams.map((t, i) => ({ name: tName(i), players: t.players.map(p => p.name).filter(Boolean).join(', ') || 'No players yet', meta: calcs[i].thru === 18 ? 'Finished' : calcs[i].thru ? 'Thru ' + calcs[i].thru : '',
         bg: 'transparent', pick: () => { const first = calcs[i].holes.findIndex(x => !x.complete); saveUI({ teamId: t.id, eventId: s.eventId }); this.setState({ myTeam: i, hole: first < 0 ? 17 : first }); } }))
         .filter((_, i) => s.teams[i].players.some(p => p.pid)), // only teams with players assigned
