@@ -159,7 +159,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
 
     <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
-        <sc-for list="{{ prizeLeaders }}" as="p" hint-placeholder-count="5">
+        <sc-for list="{{ prizeLeaders }}" as="p" hint-placeholder-count="4">
           <div style="padding:var(--space-3) var(--space-4);border-right:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);display:flex;flex-direction:column;gap:var(--space-1)">
             <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent-700);font-weight:600">{{ p.label }}</div>
             <div style="font-size:18px;font-weight:800;line-height:1.15">{{ p.winners }}</div>
@@ -697,7 +697,8 @@ class Component extends DCLogic {
   }
 
   prizes() {
-    return [{ key: 'bird', label: 'Most birdies' }, { key: 'fo', label: 'Front 9 overall' }, { key: 'bo', label: 'Back 9 overall' }, { key: 'to', label: '18-hole overall' }];
+    // Order shown on the Leaderboard (2×2: Front, Back / Birdies, Overall) and Payouts.
+    return [{ key: 'fo', label: 'Front 9 overall' }, { key: 'bo', label: 'Back 9 overall' }, { key: 'bird', label: 'Most birdies' }, { key: 'to', label: '18-hole overall' }];
   }
 
   winners(calcs, key) {
@@ -728,7 +729,9 @@ class Component extends DCLogic {
     const active = s.teams.map(t => t.players.some(p => p.pid)), nActive = active.filter(Boolean).length;
     const final = nActive > 0 && calcs.every((c, i) => !active[i] || c.thru === 18);
     const prizes = this.prizes();
-    const nTeams = s.teams.length, pot = nTeams * 4 * (+s.buyIn || 0), per = pot / prizes.length;
+    // Pot = one buy-in for every player actually on a team.
+    const teamSize = s.teams.map(t => t.players.filter(p => p.pid).length), nPlayers = teamSize.reduce((a, b) => a + b, 0);
+    const pot = nPlayers * (+s.buyIn || 0), per = pot / prizes.length;
     const go = screen => () => this.setState({ screen, menuOpen: false });
     const tName = i => 'Team ' + s.teams[i].name;
     const finished = calcs.filter((c, i) => active[i] && c.thru === 18).length;
@@ -814,8 +817,9 @@ class Component extends DCLogic {
     });
     const nf = v => v > 0 ? 'var(--color-accent-700)' : 'var(--color-text)';
     const payGroups = s.teams.map((t, i) => {
-      const pw = won[i] / 4, pn = pw - (+s.buyIn || 0);
-      return { team: tName(i), won: money(won[i]), net: (pn * 4 > 0 ? '+' : '') + money(pn * 4), netFg: nf(pn),
+      // A team's winnings split evenly among its own players.
+      const k = teamSize[i] || 1, pw = won[i] / k, pn = pw - (+s.buyIn || 0);
+      return { team: tName(i), won: money(won[i]), net: (pn * k > 0 ? '+' : '') + money(pn * k), netFg: nf(pn),
         players: t.players.filter(p => p.pid).map(p => ({ name: p.name, won: money(pw), net: (pn > 0 ? '+' : '') + money(pn), netFg: nf(pn) })) };
     }).filter((_, i) => active[i]) // only teams with players
       .sort((a, b) => parseFloat(b.won.replace(/[^0-9.]/g, '')) - parseFloat(a.won.replace(/[^0-9.]/g, '')));
@@ -852,7 +856,7 @@ class Component extends DCLogic {
       detailPlayers: dpl.map(p => ({ ini: ini(p.name), name: p.name, hcp: p.hcp })),
       cardRows, detailPlayerCols: 'repeat(' + Math.max(1, dpl.length) + ',1fr)',
       cardCols: '44px 36px repeat(' + Math.max(1, dpl.length) + ',minmax(0,1fr)) repeat(' + teamCols.length + ',minmax(0,1fr))',
-      potCells: [{ label: 'Pot', val: money(pot) }, { label: 'Per prize', val: money(per) }, { label: 'Buy-in', val: money(+s.buyIn || 0) }],
+      potCells: [{ label: 'Pot · ' + nPlayers + (nPlayers === 1 ? ' player' : ' players'), val: money(pot) }, { label: 'Per prize', val: money(per) }, { label: 'Buy-in', val: money(+s.buyIn || 0) }],
       buyInLabel: money(+s.buyIn || 0), notFinal: !final, isFinal: final, finishedLine: finished + ' of ' + nActive + ' teams have finished 18 holes.', prizeRows, payGroups,
       buyIn: s.buyIn, myTeamName: hasTeam ? tName(myTeam) : 'Not chosen yet',
       editCourseName: ed.name,
