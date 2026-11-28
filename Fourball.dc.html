@@ -309,7 +309,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
         </sc-if>
         <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
           <div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">Start a new event?</div>
-          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with one empty team. Add players and teams below. Past events stay saved.</div>
+          <div style="font-size:14px;line-height:1.4">Starts a fresh scorecard on the home course with four empty teams. Add players to them below. Past events stay saved.</div>
           <button class="btn btn-primary btn-block" onClick="{{ newKeep }}" style="height:52px">Start new event</button>
           <button class="btn btn-ghost" onClick="{{ cancelNew }}">Cancel</button>
         </sc-if>
@@ -342,7 +342,7 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
         <span style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Teams</span>
         <button class="btn btn-ghost" onClick="{{ goPlayers }}" style="white-space:nowrap">Manage players →</button>
       </div>
-      <sc-for list="{{ setupTeams }}" as="t" hint-placeholder-count="1">
+      <sc-for list="{{ setupTeams }}" as="t" hint-placeholder-count="4">
         <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4);border-top:2px solid var(--color-text)">
           <input class="input" value="{{ t.name }}" onChange="{{ t.setName }}" placeholder="Team name" style="font-weight:800;font-size:17px">
           <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 92px 36px;gap:var(--space-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em"><span>Player</span><span>Idx</span><span>Tees</span><span>HCP</span></div>
@@ -360,9 +360,6 @@ if ('serviceWorker' in navigator && window.top === window.self && location.proto
           </sc-for>
         </div>
       </sc-for>
-      <div style="padding:0 var(--space-4) var(--space-4)">
-        <button class="btn btn-secondary btn-block" onClick="{{ addTeam }}" style="height:48px">+ Add team</button>
-      </div>
 
       <div style="display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) var(--space-4) var(--space-3);border-top:2px solid var(--color-text)">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Edit course · par and hole handicap (stroke index)</div>
@@ -421,7 +418,7 @@ const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xx
 const DEFAULT_TEES = () => [{ id: uuid(), name: 'Blue', rating: 72.4, slope: 131 }, { id: uuid(), name: 'White', rating: 70.1, slope: 125 }, { id: uuid(), name: 'Gold', rating: 67.8, slope: 117 }];
 const PLACEHOLDER_COURSE = { id: null, name: 'No course yet', home: false, par: Array(18).fill(4), si: SI_DEFAULT, tees: [{ id: null, name: '—', rating: 72, slope: 113 }] };
 const byName = (a, b) => a.name.localeCompare(b.name);
-const defaultTeams = () => [0].map(i => ({ id: null, name: String(i + 1), players: [0, 1, 2, 3].map(() => ({ epId: null, pid: null, tee: 1 })) }));
+const defaultTeams = () => [0, 1, 2, 3].map(i => ({ id: null, name: String(i + 1), players: [0, 1, 2, 3].map(() => ({ epId: null, pid: null, tee: 1 })) }));
 const emptyScores = teams => teams.map(t => t.players.map(() => Array(18).fill(null)));
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch (e) { return {}; } };
 const saveUI = patch => { try { localStorage.setItem(UIKEY, JSON.stringify(Object.assign(loadUI(), patch))); } catch (e) {} };
@@ -570,8 +567,8 @@ class Component extends DCLogic {
     const s = this.state, home = s.courses.find(c => c.home) || s.courses[0];
     if (!home) { this.fail('Add a course before starting an event.'); return; }
     const evId = uuid(), tees = home.tees;
-    // A new event starts clean: one team (Team 1), no players. Tees default to the second tee (or the only one).
-    const src = [{ name: '1', players: [0, 1, 2, 3].map(() => ({ pid: null, tee: Math.min(1, Math.max(0, tees.length - 1)) })) }];
+    // A new event starts clean: four teams (1-4), no players. Tees default to the second tee (or the only one).
+    const src = [1, 2, 3, 4].map(k => ({ name: String(k), players: [0, 1, 2, 3].map(() => ({ pid: null, tee: Math.min(1, Math.max(0, tees.length - 1)) })) }));
     const teamRows = src.map((t, i) => ({ id: uuid(), event_id: evId, position: i, name: t.name || String(i + 1) }));
     const epRows = [];
     src.forEach((t, i) => t.players.forEach((p, slot) => epRows.push({ id: uuid(), event_id: evId, team_id: teamRows[i].id, slot, player_id: null, tee_id: tees.length ? tees[Math.min(p.tee, tees.length - 1)].id : null })));
@@ -585,33 +582,7 @@ class Component extends DCLogic {
     let k = 0;
     const teams = src.map((t, i) => ({ id: teamRows[i].id, name: teamRows[i].name, players: t.players.map(p => ({ epId: epRows[k++].id, pid: null, tee: p.tee })) }));
     // Stay on Event setup so players can be added to the new teams.
-    this.setState({ revealed: [], eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'setup' });
-  }
-
-  // Teams shown in Event setup: those with players, those added with "Add team", and always the first.
-  // Empty teams saved by older versions (which always made 4) stay hidden until "Add team" reuses them.
-  shownTeams(st = this.state) {
-    const rev = st.revealed || [];
-    return st.teams.map((t, i) => i).filter(i => i === 0 || st.teams[i].players.some(p => p.pid) || rev.includes(st.teams[i].id || 'i' + i));
-  }
-
-  // Add an empty team (4 open player slots). During a live event it is saved straight away.
-  addTeam() {
-    const s = this.state, n = s.teams.length, shown = this.shownTeams();
-    const hidden = s.teams.findIndex((t, i) => !shown.includes(i));
-    if (hidden >= 0) { const key = s.teams[hidden].id || 'i' + hidden; this.setState(st => ({ revealed: (st.revealed || []).concat([key]) })); return; }
-    const used = s.teams.map(t => t.name); let k = n + 1; while (used.includes(String(k))) k++;
-    const name = String(k), live = s.inProgress && s.eventId;
-    const crs = s.courses.find(c => c.id === s.courseId), tees = crs ? crs.tees : [], tee = Math.min(1, Math.max(0, tees.length - 1));
-    const team = { id: live ? uuid() : null, name, players: [0, 1, 2, 3].map(() => ({ epId: live ? uuid() : null, pid: null, tee })) };
-    this.setState(st => ({ teams: st.teams.concat([team]), scores: st.scores.concat([team.players.map(() => Array(18).fill(null))]), revealed: (st.revealed || []).concat([team.id || 'i' + n]) }));
-    if (live) {
-      const evId = s.eventId, teeId = tees.length ? tees[tee].id : null;
-      this.queue('addTeam' + team.id, async () => {
-        const r = await this.sb.from('event_teams').insert({ id: team.id, event_id: evId, position: n, name }); if (r.error) return r;
-        return this.sb.from('event_players').insert(team.players.map((p, slot) => ({ id: p.epId, event_id: evId, team_id: team.id, slot, player_id: null, tee_id: teeId })));
-      });
-    }
+    this.setState({ eventId: evId, inProgress: true, courseId: home.id, teams, scores: emptyScores(teams), hole: 0, detail: 0, confirmNew: false, myTeam: null, screen: 'setup' });
   }
 
   pickCourse(id) {
@@ -879,8 +850,7 @@ class Component extends DCLogic {
       formatHelp: { gn: 'Each hole counts the team\u2019s best gross ball and best net ball. Prizes: birdies, front 9, back 9, 18 holes.', gg: 'Each hole counts the team\u2019s two best gross balls. Prizes: birdies, front 9, back 9, 18 holes.', nn: 'Each hole counts the team\u2019s two best net balls. Prizes: birdies, front 9, back 9, 18 holes.' }[f],
       ...this.playersVals(s),
       goPlayers: go('players'),
-      addTeam: () => this.addTeam(),
-      setupTeams: s.teams.map((t, ti) => ({ ti, t })).filter(({ ti }) => this.shownTeams().includes(ti)).map(({ t, ti }) => ({ name: t.name, setName: e => { const v = e.target.value; this.mut(n => n.teams[ti].name = v); if (t.id) this.queue('tn' + t.id, () => this.sb.from('event_teams').update({ name: v }).eq('id', t.id), 500); },
+      setupTeams: s.teams.map((t, ti) => ({ name: t.name, setName: e => { const v = e.target.value; this.mut(n => n.teams[ti].name = v); if (t.id) this.queue('tn' + t.id, () => this.sb.from('event_teams').update({ name: v }).eq('id', t.id), 500); },
         players: t.players.map((p, pi) => ({ name: p.name, hcp: p.pid ? p.hcp : '', index: p.pid ? p.index : '', tee: String(p.tee), pid: p.pid || '',
           opts: [{ v: '', label: 'Choose player', dis: false }].concat(s.roster.slice().sort(byName).map(r => { const used = s.teams.some((t2, a) => t2.players.some((p2, b) => p2.pid === r.id && !(a === ti && b === pi))); return { v: r.id, label: r.name + (used ? ' (on a team)' : ''), dis: used }; })),
           setPid: e => { const v = e.target.value; this.mut(n => n.teams[ti].players[pi].pid = v || null); if (p.epId) this.queue('pp' + p.epId, () => this.sb.from('event_players').update({ player_id: v || null }).eq('id', p.epId)); },
